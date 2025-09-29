@@ -1,0 +1,144 @@
+@import "tailwindcss";
+
+:root {
+    --primary: #0e6e47;
+    --secondary: #13955d;
+    --dark: #0c4831;
+    --light: #d5f6e1;
+    --x-light: #edfcf3;
+}
+
+@font-face {
+    font-family: Montserrat;
+    src: url('./assets/fonts/Montserrat_Regular.ttf');
+}
+
+* {
+    font-family: Montserrat;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    font-weight: bold;
+}
+
+h1 {
+    font-size: 2.5rem;
+}
+
+h2 {
+    font-size: 2.2rem;
+}
+
+h3 {
+    font-size: 2rem;
+}
+
+h4 {
+    font-size: 1.5rem;
+}
+
+h5 {
+    font-size: 1.3rem;
+}
+
+h6 {
+    font-size: 1.1rem;
+}
+
+button {
+    cursor: pointer;
+}
+
+input {
+    padding: 12px;
+    border-radius: 8px;
+    outline: 0;
+}
+
+input:focus {
+    border: 1px solid var(--secondary);
+}
+
+.main-container {
+    width: 100%;
+    max-width: 1280px;
+    margin: 0 auto;
+    padding-inline: 20px;
+}
+
+.shad {
+    box-shadow: rgba(0, 0, 0, 0.08) 0px 8px 20px;
+}
+
+.login-form {
+    animation: login 1s ease-in-out forwards;
+}
+
+@keyframes login {
+    from {
+        opacity: 0;
+        transform: translateY(10%);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0%);
+    }
+}
+
+@media screen and (max-width: 767px) {
+    h1 {
+        font-size: 2.2rem;
+    }
+
+    h2 {
+        font-size: 2rem;
+    }
+
+    h3 {
+        font-size: 1.8rem;
+    }
+
+    h4 {
+        font-size: 1.25rem;
+    }
+
+    h5 {
+        font-size: 1.15rem;
+    }
+
+    h6 {
+        font-size: 1rem;
+    }
+}
+
+@media screen and (max-width: 499px) {
+    h1 {
+        font-size: 2rem;
+    }
+
+    h2 {
+        font-size: 1.8rem;
+    }
+
+    h3 {
+        font-size: 1.5rem;
+    }
+
+    h4 {
+        font-size: 1.1rem;
+    }
+
+    h5 {
+        font-size: 1rem;
+    }
+
+    .main-container {
+        padding-inline: 12px;
+    }
+}
