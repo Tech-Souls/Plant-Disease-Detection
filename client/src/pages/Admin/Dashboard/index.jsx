@@ -19,12 +19,12 @@ export default function Dashboard() {
                     <p className='text-sm text-[var(--dark)] font-bold'>Total Users</p>
                     <p className='text-[24px] text-[var(--dark)] font-bold'>10</p>
                 </div>
-                <div className='flex flex-col items-center gap-2 p-8 bg-white cursor-pointer rounded-[12px] shad' onClick={() => navigate("/admin/users")}>
+                <div className='flex flex-col items-center gap-2 p-8 bg-white cursor-pointer rounded-[12px] shad' onClick={() => navigate("/admin/chat-history")}>
                     <BsChatLeftDotsFill className='text-[24px] text-[var(--dark)]' />
                     <p className='text-sm text-[var(--dark)] font-bold'>Total Chats</p>
                     <p className='text-[24px] text-[var(--dark)] font-bold'>120</p>
                 </div>
-                <div className='flex flex-col items-center gap-2 p-8 bg-white cursor-pointer rounded-[12px] shad' onClick={() => navigate("/admin/users")}>
+                <div className='flex flex-col items-center gap-2 p-8 bg-white cursor-pointer rounded-[12px] shad' onClick={() => navigate("/admin/messages")}>
                     <TbDeviceMobileMessage className='text-[28px] text-[var(--dark)]' />
                     <p className='text-sm text-[var(--dark)] font-bold'>Messages Received</p>
                     <p className='text-[24px] text-[var(--dark)] font-bold'>20</p>
