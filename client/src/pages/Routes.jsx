@@ -5,6 +5,7 @@ import Admin from './Admin'
 import Auth from './Auth'
 import { useAuthContext } from '../contexts/AuthContext'
 import PrivateRoute from '../components/PrivateRoute'
+import AImodel from './Frontend/ChatBot/AIModel.jsx'
 
 export default function Index() {
     const { isAuthenticated } = useAuthContext()
@@ -14,6 +15,7 @@ export default function Index() {
             <Route path='/*' element={<Frontend />} />
             <Route path='/auth/*' element={!isAuthenticated ? <Auth /> : <Navigate to="/" />} />
             <Route path='/admin/*' element={<PrivateRoute Component={Admin} allowedRoles={["admin"]} />} />
+            <Route path='/ChatBot' element={<AImodel />} />
         </Routes>
     )
 }

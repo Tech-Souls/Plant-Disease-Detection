@@ -7,8 +7,15 @@ import result from '../../assets/images/result.svg'
 import process from '../../assets/images/process.svg'
 import { CgArrowRight } from 'react-icons/cg'
 import { IoReturnDownBack } from "react-icons/io5";
+import { useNavigate } from 'react-router-dom';
+
 
 export default function HeroSection() {
+    const navigate = useNavigate();
+    const handleClick = () => {
+        navigate('/ChatBot')
+    };
+
     return (
         <div className='w-full min-h-screen flex flex-col !p-3 sm:!p-10'>
             <div className='main-container relative flex flex-col md:flex-row md:gap-20 xl:gap-30 !px-0 pt-5 pb-30 !mb-20'>
@@ -25,7 +32,9 @@ export default function HeroSection() {
                         <li>100% free for usage</li>
                         <li>AI-Powered identification</li>
                     </ul>
-                    <button className='flex items-center gap-2 bg-[var(--secondary)] text-white font-semibold px-10 py-3.5 rounded-[12px] mt-14 transition-all duration-200 ease-linear hover:bg-[var(--secondary)]/80 hover:gap-4'>Try now <CgArrowRight /></button>
+                    <button
+                        onClick={handleClick}
+                        className='flex items-center gap-2 bg-[var(--secondary)] text-white font-semibold px-10 py-3.5 rounded-[12px] mt-14 transition-all duration-200 ease-linear hover:bg-[var(--secondary)]/80 hover:gap-4'>Try now <CgArrowRight /></button>
                 </div>
 
                 <img src={leafSmooth} alt="leaf-smooth" className='absolute -right-20 bottom-0 sm:bottom-20 w-[200px] opacity-80 -z-1' />
