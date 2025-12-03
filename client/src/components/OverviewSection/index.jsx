@@ -5,8 +5,13 @@ import overview3 from '../../assets/images/overview3.jpg'
 import leafSharp from '../../assets/images/leaf-sharp.svg'
 import { MdOutlineSavedSearch } from "react-icons/md";
 import { CgArrowRight } from 'react-icons/cg'
+import { useNavigate } from 'react-router-dom'
 
 export default function OverviewSection() {
+    const navigate = useNavigate();
+    const handleClick = ()=>{
+        return navigate('/ChatBot')
+    };
     return (
         <div className='main-container py-20'>
             <div>
@@ -31,7 +36,9 @@ export default function OverviewSection() {
 
             <div className='relative flex flex-col items-center gap-8 bg-[var(--light)] mt-20 sm:mt-30 p-10 md:p-20 rounded-[24px]'>
                 <h1><span className='text-[var(--primary)]'>Stop killing</span> – start treating your plants!</h1>
-                <button className='flex justify-center items-center gap-2 w-full sm:w-fit bg-[var(--secondary)] text-white px-12 py-4 rounded-[12px] transition-all duration-200 ease-linear hover:bg-[var(--secondary)]/80 hover:gap-4'>Diagnose Now <CgArrowRight /></button>
+                <button 
+                onClick={handleClick}
+                className='flex justify-center items-center gap-2 w-full sm:w-fit bg-[var(--secondary)] text-white px-12 py-4 rounded-[12px] transition-all duration-200 ease-linear hover:bg-[var(--secondary)]/80 hover:gap-4'>Diagnose Now <CgArrowRight /></button>
 
                 <div className="absolute top-0 right-0 rotate-240 opacity-50">
                     <img src={leafSharp} alt="leaf-sharp" className='w-34' />

@@ -9,7 +9,6 @@ import { CgArrowRight } from 'react-icons/cg'
 import { IoReturnDownBack } from "react-icons/io5";
 import { useNavigate } from 'react-router-dom';
 
-
 export default function HeroSection() {
     const navigate = useNavigate();
     const handleClick = () => {

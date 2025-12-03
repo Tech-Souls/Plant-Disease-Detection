@@ -40,7 +40,7 @@ def loading_image(image):
     except Exception as e:
         print("Error while loading image\n",e)
 
-def predictor(model,image_tensor,device,class_names,top_k=5):
+def predictor(model,image_tensor,device,class_names,top_k=27):
     image_tensor= image_tensor.to(device) # In case the device is gpu
     with torch.no_grad():
         outputs = model(image_tensor)   

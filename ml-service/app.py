@@ -1,10 +1,12 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from inference import predict
+from deepseek import api_call
 from pydantic import BaseModel
 import base64
 from PIL import Image
 from io import BytesIO
+import json
 
 app = FastAPI()
 origins = [
@@ -21,6 +23,8 @@ app.add_middleware(
 class PredictRequest(BaseModel):
     image: str
 
+class DeepSeekRequest(BaseModel):
+    prompt_data: str    
 
 @app.post('/predict')
 def prediction(req: PredictRequest):
@@ -32,6 +36,20 @@ def prediction(req: PredictRequest):
     model_path = "model/epoch_19.pth"
     results = predict(model_path, img)  # pass PIL Image
     return results
+
+@app.post('/deepseek')
+def apicall(req: DeepSeekRequest):
+    try:
+        result = api_call(req.prompt_data)
+        if not result:
+            return "prompt_data wasn't sent!!!"
+        try:
+            result = json.loads(result)
+        except:
+            pass
+    except Exception as e:
+        return {'error': f"Error while calling Deepseek\n {e}"}
+    return result
 
 @app.get("/isAlive")
 def alive():
