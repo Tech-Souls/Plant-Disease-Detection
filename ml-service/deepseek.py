@@ -4,7 +4,7 @@ def api_call(model_output):
     output = None
     try:
         client = OpenAI(
-            api_key="sk-c749d369622646aeaf909f89b33e2648",
+            api_key="pass",
             base_url="https://api.deepseek.com"
         )
 
@@ -34,3 +34,4 @@ Provide the answer in JSON format.
         print("Some error while calling Deepseek:\n", e)
 
     return output
+
