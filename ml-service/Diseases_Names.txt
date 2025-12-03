@@ -1,0 +1,15 @@
+Scab
+Rust
+Leaf spot
+Gray leaf spot
+Leaf blight
+Blight
+Early blight
+Late blight
+Powdery mildew
+Septoria leaf spot
+Bacterial spot
+Mosaic virus
+Yellow virus
+Mold
+Black rot
