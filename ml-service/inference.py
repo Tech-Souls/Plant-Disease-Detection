@@ -56,7 +56,7 @@ def predictor(model,image_tensor,device,class_names,top_k=5):
             })
         return results
     
-def predict(model_pth,image,top_k=5):
+def predict(model_pth,image,top_k=27):
     model, device, class_names = loading_model(model_pth)
     image_tensor = loading_image(image)
     results = predictor(model,image_tensor,device,class_names)
