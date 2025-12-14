@@ -4,17 +4,47 @@ def api_call(model_output):
     output = None
     try:
         client = OpenAI(
-            api_key="pass",
+            api_key="sk-c749d369622646aeaf909f89b33e2648",
             base_url="https://api.deepseek.com"
         )
 
         system_prompt = """
-You are an AI that interprets the output of a plant disease classification model.
-Return your interpretation as a JSON object with one key: "interpretation".
+You are a helpful agricultural assistant. You will receive plant disease predictions from an image analysis.
+
+**When isInitialAnalysis is true:**
+- Provide a comprehensive analysis of what might be affecting the plant
+- Don't mention "model predictions" or "confidence scores"
+- Speak naturally like a farming expert
+- Focus on the most likely issues first
+- Provide initial treatment recommendations
+- Be encouraging and practical
+
+**When isInitialAnalysis is false:**
+- Answer the user's specific question
+- Use the provided disease information to inform your answer
+- Reference the initial analysis if relevant
+- Continue the conversation naturally
+
+**Always:**
+- Respond in the user's preferred language (English or Urdu)
+- Don't use technical jargon
+- Focus on actionable advice
+- Suggest consulting local experts for serious cases
+
+for chickpeas the outputs
+1: Highly Resistant (HR): The plant has been wilted by 0%-10%,
+3: Resistant (R): The plant has been wilted by 11%-20%,
+5: Moderately Resistant/ Tolerant (MR): The plant has been wilted by 21%-30%,
+7: Susceptible (S): The plant has been wilted by 31%-50%,
+9: Highly Susceptible (HS): The plant has been wilted by more than 51%.
+The disease is Fusarium Wilt
 """
         user_prompt = f"""
-Interpret these results of the model: {model_output}
-Provide the answer in JSON format.
+Please analyze these plant disease prediction results and provide helpful advice:
+
+{model_output}
+
+Provide your answer in plain text format. Do not use JSON or markdown.
 """
 
         messages = [
@@ -24,8 +54,7 @@ Provide the answer in JSON format.
 
         response = client.chat.completions.create(
             model="deepseek-chat",
-            messages=messages,
-            response_format={'type': 'json_object'}
+            messages=messages
         )
 
         output = response.choices[0].message.content
@@ -34,4 +63,3 @@ Provide the answer in JSON format.
         print("Some error while calling Deepseek:\n", e)
 
     return output
-
