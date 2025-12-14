@@ -142,3 +142,24 @@ input:focus {
         padding-inline: 12px;
     }
 }
+
+/* Urdu/RTL text support */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans&family=Noto+Naskh+Arabic&display=swap');
+
+.urdu-support {
+    font-family: 'Noto Naskh Arabic', 'Noto Sans', 'Segoe UI', Tahoma, Geneva, sans-serif;
+    line-height: 1.8;
+    text-align: right;
+}
+
+/* For mixed LTR/RTL text */
+.mixed-text {
+    unicode-bidi: plaintext;
+    text-align: start;
+}
+
+/* Better word breaking for Urdu */
+.urdu-text {
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+}

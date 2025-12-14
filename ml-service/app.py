@@ -33,7 +33,7 @@ def prediction(req: PredictRequest):
         img = Image.open(BytesIO(img_bytes)).convert("RGB")
     except Exception as e:
         return {"error": f"Invalid image: {e}"}
-    model_path = "model/epoch_19.pth"
+    model_path = "model/18_Epoch.pth"
     results = predict(model_path, img)  # pass PIL Image
     return results
 
