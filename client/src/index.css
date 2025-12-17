@@ -144,7 +144,7 @@ input:focus {
 }
 
 /* Urdu/RTL text support */
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans&family=Noto+Naskh+Arabic&display=swap');
+
 
 .urdu-support {
     font-family: 'Noto Naskh Arabic', 'Noto Sans', 'Segoe UI', Tahoma, Geneva, sans-serif;

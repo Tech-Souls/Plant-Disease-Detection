@@ -63,3 +63,5 @@ Provide your answer in plain text format. Do not use JSON or markdown.
         print("Some error while calling Deepseek:\n", e)
 
     return output
+
+print(api_call('{maize_blight: 100%}'))
