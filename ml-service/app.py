@@ -9,17 +9,20 @@ from io import BytesIO
 import json
 
 app = FastAPI()
+
 origins = [
-    '*'
+    "https://plant-dd.vercel.app",
+    "http://localhost:5173",
 ]
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["*"],  # allow all HTTP methods
-    allow_headers=["*"],  # allow all headers
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
+
 class PredictRequest(BaseModel):
     image: str
 
