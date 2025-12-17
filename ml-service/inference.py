@@ -6,25 +6,27 @@ from PIL import Image
 import timm
 
 def loading_model(model_pth):
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu') # If there's no gpu, import cpu
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     try:
-        checkpoint = torch.load(model_pth, map_location=device)
-        class_to_idx=checkpoint['class_to_idx'].items()
-        class_to_idx={k:v for k,v in class_to_idx}
+        checkpoint = torch.load(model_pth, map_location=device, weights_only=False)
+        
+        class_to_idx = checkpoint['class_to_idx'].items()
+        class_to_idx = {k: v for k, v in class_to_idx}
         num_classes = len(class_to_idx)
-        model_name= 'resnet18'
+        model_name = 'resnet18'
         class_names = list(class_to_idx.keys())
 
-        model = timm.create_model(model_name,pretrained=False,num_classes=num_classes)
+        model = timm.create_model(model_name, pretrained=False, num_classes=num_classes)
         model.load_state_dict(checkpoint['model_state_dict'])
         model = model.to(device)
+        model.eval()
 
         print("model is loaded!!!")
-
         return model, device, class_names
     except Exception as e:
-        print("Some bullshit error occured while loading model")
+        print("Error occurred while loading model")
         print(e)
+        raise e
         
 def loading_image(image):
     try:
