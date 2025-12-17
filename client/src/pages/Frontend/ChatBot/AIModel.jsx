@@ -165,7 +165,7 @@ const AIModel = () => {
                 isInitialAnalysis: true
             };
 
-            const deepseekRes = await axios.post("http://localhost:8000/deepseek", {
+            const deepseekRes = await axios.post(`${import.meta.env.VITE_PYTHON_HOST}/deepseek`, {
                 prompt_data: JSON.stringify(context),
             });
 
@@ -215,7 +215,7 @@ const AIModel = () => {
             }]);
 
             // Send to /predict
-            const predictRes = await axios.post("http://localhost:8000/predict", {
+            const predictRes = await axios.post(`${import.meta.env.VITE_PYTHON_HOST}/predict`, {
                 image: base64Image,
             });
             
@@ -307,7 +307,7 @@ const AIModel = () => {
             };
 
             // Send to DeepSeek
-            const deepseekRes = await axios.post("http://localhost:8000/deepseek", {
+            const deepseekRes = await axios.post(`${import.meta.env.VITE_PYTHON_HOST}/deepseek`, {
                 prompt_data: JSON.stringify(context),
             });
 

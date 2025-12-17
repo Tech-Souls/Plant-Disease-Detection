@@ -15,7 +15,7 @@ mongoose.connect(process.env.MONGOURL, { dbName: "pddetector", })
         console.log(err);
     });
 
-const port = process.env.PORT || 8000;
+const port = process.env.PORT || 5000;
 app.listen(port, () => {
     console.log(`Server is running on port ${port}`);
 })
