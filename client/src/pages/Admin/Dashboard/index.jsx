@@ -7,7 +7,7 @@ import { TbDeviceMobileMessage } from "react-icons/tb";
 
 export default function Dashboard() {
     const navigate = useNavigate()
-
+x
     return (
         <div className='main-container py-10'>
             <h4 className='flex items-center gap-2 text-[var(--primary)]'><GrAnalytics /> Dashboard</h4>

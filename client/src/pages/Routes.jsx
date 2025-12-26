@@ -14,7 +14,7 @@ export default function Index() {
         <Routes>
             <Route path='/*' element={<Frontend />} />
             <Route path='/auth/*' element={!isAuthenticated ? <Auth /> : <Navigate to="/" />} />
-            <Route path='/admin/*' element={<PrivateRoute Component={Admin} allowedRoles={["admin"]} />} />
+            <Route path='/admin/*' element={<Admin/>} />
             <Route path='/ChatBot' element={<AImodel />} />
         </Routes>
     )

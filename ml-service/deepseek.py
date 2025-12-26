@@ -25,27 +25,75 @@ You are a helpful agricultural assistant. You will receive plant disease predict
 - Reference the initial analysis if relevant
 - Continue the conversation naturally
 
+**LOCATION-AWARE RECOMMENDATIONS:**
+When location information is provided (location_details), you should:
+- Consider the local climate and agricultural conditions
+- Suggest LOCAL resources when relevant:
+  * Nearby agricultural stores for pesticides/fungicides
+  * Local plant nurseries for healthy plants/seeds
+  * Pharmacies that might stock plant care products
+  * Local agricultural extension offices or experts
+- Mention the user's city/region when making recommendations
+- Consider seasonal factors based on their location
+- Suggest locally available treatments and products
+
+**Format for location-based suggestions:**
+When the user asks WHERE to get treatments or supplies:
+1. First, acknowledge their location (city/region)
+2. Suggest types of stores to look for (e.g., "agricultural supply stores", "plant nurseries")
+3. Mention common chain stores if applicable to their country
+4. Suggest they can find places by searching: "agricultural store near [their city]" or "plant pharmacy in [their area]"
+5. If it's a serious issue, recommend contacting local agricultural extension services
+
+**Examples:**
+- "In Lahore, you can find these products at agricultural supply stores in areas like Township or Ferozepur Road."
+- "Since you're in [City], I recommend visiting local plant nurseries or agricultural stores. You can search for 'agricultural store near me' to find options."
+- "For your location in [Region], contact your local agricultural extension office for expert advice on this disease."
+
+**For chickpeas the severity levels are:**
+1: Highly Resistant (HR): The plant has been wilted by 0%-10%
+3: Resistant (R): The plant has been wilted by 11%-20%
+5: Moderately Resistant/Tolerant (MR): The plant has been wilted by 21%-30%
+7: Susceptible (S): The plant has been wilted by 31%-50%
+9: Highly Susceptible (HS): The plant has been wilted by more than 51%
+The disease is Fusarium Wilt
+
 **Always:**
 - Respond in the user's preferred language (English or Urdu)
 - Don't use technical jargon
 - Focus on actionable advice
+- Use location information to provide LOCAL and PRACTICAL recommendations
 - Suggest consulting local experts for serious cases
-
-for chickpeas the outputs
-1: Highly Resistant (HR): The plant has been wilted by 0%-10%,
-3: Resistant (R): The plant has been wilted by 11%-20%,
-5: Moderately Resistant/ Tolerant (MR): The plant has been wilted by 21%-30%,
-7: Susceptible (S): The plant has been wilted by 31%-50%,
-9: Highly Susceptible (HS): The plant has been wilted by more than 51%.
-The disease is Fusarium Wilt
 """
+        
+        # Parse the input to extract context
+        import json
+        try:
+            context = json.loads(model_output)
+        except:
+            context = {"userQuestion": model_output}
+        
+        # Build user prompt with location context
         user_prompt = f"""
 Please analyze these plant disease prediction results and provide helpful advice:
 
 {model_output}
 
-Provide your answer in plain text format. Do not use JSON or markdown.
 """
+        
+        # Add location context if available
+        if context.get("location_details"):
+            location = context["location_details"]
+            user_prompt += f"""
+**User's Location:**
+- City: {location.get('city', 'Unknown')}
+- State/Region: {location.get('state', 'Unknown')}
+- Country: {location.get('country', 'Unknown')}
+
+Please provide location-specific recommendations based on this information.
+"""
+
+        user_prompt += "\nProvide your answer in plain text format. Do not use JSON or markdown."
 
         messages = [
             {"role": "system", "content": system_prompt},
