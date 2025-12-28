@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuthContext } from '../../../contexts/AuthContext';
 import loginImg from '../../../assets/images/login-page.webp'
 import { FiLogIn } from "react-icons/fi";
@@ -51,6 +51,7 @@ export default function Login() {
                 >
                     <h5 className='leading-px mt-4'>Welcome back!</h5>
                     <p className='text-sm text-gray-700 font-bold mb-2'>Login to continue</p>
+                    
                     <div className='flex flex-col gap-2'>
                         <label className='text-sm font-semibold text-gray-700'>Username</label>
                         <input
@@ -84,6 +85,15 @@ export default function Login() {
                     </button>
 
                     {message && <p className="text-sm text-red-500">{message}</p>}
+
+                    <div className='text-center mt-2'>
+                        <p className='text-sm text-gray-600'>
+                            Don't have an account?{' '}
+                            <Link to="/auth/signup" className='text-[var(--secondary)] hover:underline font-semibold'>
+                                Sign up here
+                            </Link>
+                        </p>
+                    </div>
                 </form>
 
                 <div className='w-full h-[30vh] sm:h-[400px] md:h-[500px]'>

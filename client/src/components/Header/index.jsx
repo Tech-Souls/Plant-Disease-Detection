@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthContext } from '../../contexts/AuthContext';
 import { FiLogIn } from "react-icons/fi";
+import { FiUserPlus } from "react-icons/fi";
 import { MdOutlineAdminPanelSettings } from "react-icons/md";
 import { RiMenu3Line } from "react-icons/ri";
 import { FaX } from "react-icons/fa6";
@@ -22,10 +23,20 @@ export default function Header() {
                     <button className='text-[var(--primary)] px-4 py-1.5 rounded-[8px] transition-all duration-150 ease-linear hover:text-[var(--primary)]/50' onClick={() => navigate("/about")}>About</button>
                     <button className='text-[var(--primary)] px-4 py-1.5 rounded-[8px] transition-all duration-150 ease-linear hover:text-[var(--primary)]/50' onClick={() => navigate("/contact")}>Contact</button>
                     {
-                        !isAuthenticated ?
-                            <button className='flex items-center gap-2 bg-[var(--secondary)] text-white px-4 py-1.5 rounded-[8px] transition-all duration-150 ease-linear hover:bg-[var(--secondary)]/75' onClick={() => navigate("/auth/login")}>Login <FiLogIn /></button>
-                            :
-                            <button className='flex items-center gap-2 bg-[var(--secondary)] text-white px-4 py-1.5 rounded-[8px] transition-all duration-150 ease-linear hover:bg-[var(--secondary)]/75' onClick={() => navigate("/admin/dashboard")}><MdOutlineAdminPanelSettings /> Admin</button>
+                        !isAuthenticated ? (
+                            <>
+                                <button className='flex items-center gap-2 bg-white text-[var(--secondary)] border-2 border-[var(--secondary)] px-4 py-1.5 rounded-[8px] transition-all duration-150 ease-linear hover:bg-[var(--secondary)] hover:text-white' onClick={() => navigate("/auth/login")}>
+                                    Login <FiLogIn />
+                                </button>
+                                <button className='flex items-center gap-2 bg-[var(--secondary)] text-white px-4 py-1.5 rounded-[8px] transition-all duration-150 ease-linear hover:bg-[var(--secondary)]/75' onClick={() => navigate("/auth/signup")}>
+                                    Sign Up <FiUserPlus />
+                                </button>
+                            </>
+                        ) : (
+                            <button className='flex items-center gap-2 bg-[var(--secondary)] text-white px-4 py-1.5 rounded-[8px] transition-all duration-150 ease-linear hover:bg-[var(--secondary)]/75' onClick={() => navigate("/admin/dashboard")}>
+                                <MdOutlineAdminPanelSettings /> Admin
+                            </button>
+                        )
                     }
                 </div>
                 <div className='block md:hidden'>
@@ -44,10 +55,20 @@ export default function Header() {
                 <button className='text-[var(--primary)] px-4 py-1.5 rounded-[8px] transition-all duration-150 ease-linear hover:text-[var(--primary)]/50' onClick={() => navigate("/terms-and-conditions")}>Terms & Condition</button>
                 <button className='text-[var(--primary)] px-4 py-1.5 rounded-[8px] transition-all duration-150 ease-linear hover:text-[var(--primary)]/50' onClick={() => navigate("/privacy-policies")}>Privacy Policies</button>
                 {
-                    !isAuthenticated ?
-                        <button className='flex justify-center items-center gap-2 bg-[var(--secondary)] text-white px-4 py-1.5 rounded-[8px] transition-all duration-150 ease-linear hover:bg-[var(--secondary)]/75' onClick={() => navigate("/auth/login")}>Login <FiLogIn /></button>
-                        :
-                        <button className='flex justify-center items-center gap-2 bg-[var(--secondary)] text-white px-4 py-1.5 rounded-[8px] transition-all duration-150 ease-linear hover:bg-[var(--secondary)]/75' onClick={() => navigate("/admin/dashboard")}><MdOutlineAdminPanelSettings /> Admin</button>
+                    !isAuthenticated ? (
+                        <>
+                            <button className='flex justify-center items-center gap-2 bg-white text-[var(--secondary)] border-2 border-[var(--secondary)] px-4 py-1.5 rounded-[8px] transition-all duration-150 ease-linear hover:bg-[var(--secondary)] hover:text-white' onClick={() => navigate("/auth/login")}>
+                                Login <FiLogIn />
+                            </button>
+                            <button className='flex justify-center items-center gap-2 bg-[var(--secondary)] text-white px-4 py-1.5 rounded-[8px] transition-all duration-150 ease-linear hover:bg-[var(--secondary)]/75' onClick={() => navigate("/auth/signup")}>
+                                Sign Up <FiUserPlus />
+                            </button>
+                        </>
+                    ) : (
+                        <button className='flex justify-center items-center gap-2 bg-[var(--secondary)] text-white px-4 py-1.5 rounded-[8px] transition-all duration-150 ease-linear hover:bg-[var(--secondary)]/75' onClick={() => navigate("/admin/dashboard")}>
+                            <MdOutlineAdminPanelSettings /> Admin
+                        </button>
+                    )
                 }
             </div>
         </>
