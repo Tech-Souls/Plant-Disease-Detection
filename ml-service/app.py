@@ -49,7 +49,7 @@ class ChatCreate(BaseModel):
     plantDisplayName: str
     conversation: List[dict]
     filteredPrediction: List[dict]
-    imagePreview: Optional[str] = None
+    imageData: Optional[str] = None  # Changed from imagePreview to imageData to store full base64
     location: Optional[dict] = None
     timestamp: str
 
@@ -271,7 +271,7 @@ def search_places(request: dict):
 # Chat CRUD endpoints with MongoDB
 @app.post('/chats')
 def create_chat(chat: ChatCreate):
-    """Create a new chat in MongoDB"""
+    """Create a new chat in MongoDB with full image data"""
     try:
         chat_document = {
             "id": chat.id,
@@ -281,7 +281,7 @@ def create_chat(chat: ChatCreate):
             "plant_display_name": chat.plantDisplayName,
             "conversation": chat.conversation,
             "filtered_prediction": chat.filteredPrediction,
-            "image_preview": chat.imagePreview,
+            "image_data": chat.imageData,  # Store full base64 image
             "location": chat.location,
             "timestamp": chat.timestamp,
             "created_at": datetime.utcnow()
@@ -297,7 +297,7 @@ def create_chat(chat: ChatCreate):
             "plantDisplayName": chat.plantDisplayName,
             "conversation": chat.conversation,
             "filteredPrediction": chat.filteredPrediction,
-            "imagePreview": chat.imagePreview,
+            "imageData": chat.imageData,
             "location": chat.location,
             "timestamp": chat.timestamp
         }
@@ -322,7 +322,7 @@ def get_user_chats(user_id: str):
                 "plantDisplayName": chat.get("plant_display_name"),
                 "conversation": chat.get("conversation", []),
                 "filteredPrediction": chat.get("filtered_prediction", []),
-                "imagePreview": chat.get("image_preview"),
+                "imageData": chat.get("image_data"),  # Return full image data
                 "location": chat.get("location"),
                 "timestamp": chat.get("timestamp")
             })
@@ -375,8 +375,8 @@ The "/predict" path is for making predictions. Give it a post request containing
 The "/deepseek" path is for AI chat responses with location-aware recommendations
 The "/search-local-places" path searches for nearby agricultural experts, extension offices, and supply stores
 The "/chats" endpoints handle chat storage (MongoDB):
-  - POST /chats - Create new chat
-  - GET /chats/{user_id} - Get all user chats
+  - POST /chats - Create new chat (with full image data)
+  - GET /chats/{user_id} - Get all user chats (with images)
   - PUT /chats/{chat_id} - Update chat conversation
   - DELETE /chats/{chat_id} - Delete chat
 The "/isAlive" returns True if the AI side is running

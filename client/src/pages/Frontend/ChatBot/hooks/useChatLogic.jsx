@@ -7,6 +7,7 @@ export const useChatLogic = () => {
     const [imageFile, setImageFile] = useState(null);
     const [imageFileName, setImageFileName] = useState(null);
     const [imageFilePreview, setImageFilePreview] = useState(null);
+    const [imageBase64, setImageBase64] = useState(null); // Store base64 for database
     const [filteredPrediction, setFilteredPrediction] = useState(null);
     const [loading, setLoading] = useState(false);
     const [selectedPlant, setSelectedPlant] = useState("");
@@ -29,14 +30,14 @@ export const useChatLogic = () => {
 
     const t = textContent[languageMode];
 
-    // Auth check - Improved with better logging
+    // Auth check
     useEffect(() => {
         const checkAuth = async () => {
             try {
                 const token = localStorage.getItem('pddtjwt');
                 const storedUserId = localStorage.getItem('userId');
                 
-                console.log('🔐 Auth Check:', { 
+                console.log('Auth Check:', { 
                     hasToken: !!token, 
                     hasUserId: !!storedUserId,
                     userId: storedUserId 
@@ -45,7 +46,7 @@ export const useChatLogic = () => {
                 if (token && storedUserId) {
                     setIsLoggedIn(true);
                     setUserId(storedUserId);
-                    console.log('✅ User is logged in, loading chats from database...');
+                    console.log('User is logged in, loading chats from database...');
                     await loadChatsFromDatabase(storedUserId);
                 } else {
                     setIsLoggedIn(false);
@@ -70,7 +71,7 @@ export const useChatLogic = () => {
     // Save chats to localStorage only when NOT logged in
     useEffect(() => {
         if (!isLoggedIn && pastChats.length > 0) {
-            console.log('💾 Saving to localStorage (user not logged in)');
+            console.log('Saving to localStorage (user not logged in)');
             localStorage.setItem('plantChatHistory', JSON.stringify(pastChats));
         }
     }, [pastChats, isLoggedIn]);
@@ -90,12 +91,16 @@ export const useChatLogic = () => {
                     setConversation(latestChat.conversation);
                     setFilteredPrediction(latestChat.filteredPrediction);
                     setSelectedPlant(latestChat.plant);
-                    setImageFilePreview(latestChat.imagePreview);
+                    // Set both preview and base64 from database
+                    if (latestChat.imageData) {
+                        setImageFilePreview(`data:image/jpeg;base64,${latestChat.imageData}`);
+                        setImageBase64(latestChat.imageData);
+                    }
                 }
             }
         } catch (error) {
-            console.error("❌ Error loading chats from database:", error);
-            console.log('⚠️ Falling back to localStorage');
+            console.error("Error loading chats from database:", error);
+            console.log('Falling back to localStorage');
             loadChatsFromLocalStorage();
         }
     };
@@ -113,7 +118,10 @@ export const useChatLogic = () => {
                     setConversation(parsedChats[0].conversation);
                     setFilteredPrediction(parsedChats[0].filteredPrediction);
                     setSelectedPlant(parsedChats[0].plant);
-                    setImageFilePreview(parsedChats[0].imagePreview);
+                    if (parsedChats[0].imageData) {
+                        setImageFilePreview(`data:image/jpeg;base64,${parsedChats[0].imageData}`);
+                        setImageBase64(parsedChats[0].imageData);
+                    }
                 }
             } catch (err) {
                 console.error("Error loading chat history from localStorage:", err);
@@ -138,13 +146,13 @@ export const useChatLogic = () => {
 
     const updateChatInDatabase = async (chatId, conversationData) => {
         try {
-            console.log('🔄 Updating chat in database:', chatId);
+            console.log('Updating chat in database:', chatId);
             await axios.put(`${import.meta.env.VITE_PYTHON_HOST}/chats/${chatId}`, {
                 conversation: conversationData
             });
-            console.log('✅ Chat updated in database successfully');
+            console.log('Chat updated in database successfully');
         } catch (error) {
-            console.error("❌ Error updating chat in database:", error);
+            console.error("Error updating chat in database:", error);
             throw error;
         }
     };
@@ -185,11 +193,19 @@ export const useChatLogic = () => {
         );
     };
 
-    const handleFileChange = (e) => {
+    const handleFileChange = async (e) => {
         const file = e.target.files[0];
         setImageFile(file);
         setImageFileName(file.name);
         setImageFilePreview(URL.createObjectURL(file));
+        
+        // Convert to base64 for storage
+        try {
+            const base64 = await getBase64(file);
+            setImageBase64(base64);
+        } catch (error) {
+            console.error("Error converting image to base64:", error);
+        }
     };
 
     const handlePlantChange = (e) => setSelectedPlant(e.target.value);
@@ -229,7 +245,7 @@ export const useChatLogic = () => {
         }
     };
 
-    const saveChatToHistory = async (conversationData, predictions, plant, imagePreview) => {
+    const saveChatToHistory = async (conversationData, predictions, plant, imageData) => {
         const newChat = {
             id: Date.now().toString(),
             title: `${getPlantDisplayName(plant, languageMode)} - ${new Date().toLocaleDateString()}`,
@@ -237,7 +253,7 @@ export const useChatLogic = () => {
             plantDisplayName: getPlantDisplayName(plant, languageMode),
             conversation: conversationData,
             filteredPrediction: predictions,
-            imagePreview: imagePreview,
+            imageData: imageData, // Store full base64 image
             location: userLocation,
             timestamp: new Date().toISOString()
         };
@@ -270,7 +286,11 @@ export const useChatLogic = () => {
             setConversation(chat.conversation);
             setFilteredPrediction(chat.filteredPrediction);
             setSelectedPlant(chat.plant);
-            setImageFilePreview(chat.imagePreview);
+            // Load image from stored base64
+            if (chat.imageData) {
+                setImageFilePreview(`data:image/jpeg;base64,${chat.imageData}`);
+                setImageBase64(chat.imageData);
+            }
             setActiveChatId(chatId);
             setSidebarOpen(false);
         }
@@ -302,6 +322,7 @@ export const useChatLogic = () => {
                 setFilteredPrediction(null);
                 setSelectedPlant("");
                 setImageFilePreview(null);
+                setImageBase64(null);
                 setActiveChatId(null);
             }
         }
@@ -314,6 +335,7 @@ export const useChatLogic = () => {
         setImageFile(null);
         setImageFileName(null);
         setImageFilePreview(null);
+        setImageBase64(null);
         setActiveChatId(null);
     };
 
@@ -329,7 +351,7 @@ export const useChatLogic = () => {
 
         setLoading(true);
         try {
-            const base64Image = await getBase64(imageFile);
+            const base64Image = imageBase64 || await getBase64(imageFile);
             const plantDisplayName = getPlantDisplayName(selectedPlant, languageMode);
 
             const loadingMessage = {
@@ -353,7 +375,7 @@ export const useChatLogic = () => {
                     isMarkdown: true
                 };
                 setConversation([analysisMessage]);
-                await saveChatToHistory([analysisMessage], filteredPreds, selectedPlant, imageFilePreview);
+                await saveChatToHistory([analysisMessage], filteredPreds, selectedPlant, base64Image);
             } else {
                 const noDiseasesMessage = {
                     role: "assistant",
@@ -364,7 +386,7 @@ export const useChatLogic = () => {
                     isMarkdown: true
                 };
                 setConversation([noDiseasesMessage]);
-                await saveChatToHistory([noDiseasesMessage], [], selectedPlant, imageFilePreview);
+                await saveChatToHistory([noDiseasesMessage], [], selectedPlant, base64Image);
             }
         } catch (err) {
             console.error("Error:", err);
