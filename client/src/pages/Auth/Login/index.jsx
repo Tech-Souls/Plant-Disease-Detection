@@ -20,7 +20,7 @@ export default function Login() {
     const handleLogin = async e => {
         e.preventDefault()
         const { username, password } = state;
-        
+
         if (!username || !password) {
             return setMessage("Please fill in all fields!");
         }
@@ -32,7 +32,10 @@ export default function Login() {
             const { token, user, message } = res.data;
             setMessage(message);
             setState(initialState);
+
             localStorage.setItem("pddtjwt", token);
+            localStorage.setItem("userId", user.userID);
+
             dispatch({ type: "SET_LOGGED_IN", payload: { user } });
             navigate("/");
         } catch (err) {
@@ -51,7 +54,7 @@ export default function Login() {
                 >
                     <h5 className='leading-px mt-4'>Welcome back!</h5>
                     <p className='text-sm text-gray-700 font-bold mb-2'>Login to continue</p>
-                    
+
                     <div className='flex flex-col gap-2'>
                         <label className='text-sm font-semibold text-gray-700'>Username</label>
                         <input

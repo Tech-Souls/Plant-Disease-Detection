@@ -23,24 +23,33 @@ export const useChatLogic = () => {
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [userId, setUserId] = useState(null);
-    
+
     const imageFileRef = useRef(null);
     const chatContainerRef = useRef(null);
 
     const t = textContent[languageMode];
 
-    // Auth check
+    // Auth check - Improved with better logging
     useEffect(() => {
         const checkAuth = async () => {
             try {
-                const token = localStorage.getItem('authToken');
-                const user = localStorage.getItem('userId');
-                if (token && user) {
+                const token = localStorage.getItem('pddtjwt');
+                const storedUserId = localStorage.getItem('userId');
+                
+                console.log('🔐 Auth Check:', { 
+                    hasToken: !!token, 
+                    hasUserId: !!storedUserId,
+                    userId: storedUserId 
+                });
+                
+                if (token && storedUserId) {
                     setIsLoggedIn(true);
-                    setUserId(user);
-                    await loadChatsFromDatabase(user);
+                    setUserId(storedUserId);
+                    console.log('✅ User is logged in, loading chats from database...');
+                    await loadChatsFromDatabase(storedUserId);
                 } else {
                     setIsLoggedIn(false);
+                    console.log('User not logged in, using localStorage for chats');
                     loadChatsFromLocalStorage();
                 }
             } catch (error) {
@@ -58,18 +67,23 @@ export const useChatLogic = () => {
         }
     }, [conversation]);
 
-    // Save chats to localStorage
+    // Save chats to localStorage only when NOT logged in
     useEffect(() => {
-        if (!isLoggedIn) {
+        if (!isLoggedIn && pastChats.length > 0) {
+            console.log('💾 Saving to localStorage (user not logged in)');
             localStorage.setItem('plantChatHistory', JSON.stringify(pastChats));
         }
     }, [pastChats, isLoggedIn]);
 
     const loadChatsFromDatabase = async (userId) => {
         try {
+            console.log('Loading chats from database for user:', userId);
             const response = await axios.get(`${import.meta.env.VITE_PYTHON_HOST}/chats/${userId}`);
+            
             if (response.data && Array.isArray(response.data)) {
+                console.log(`Loaded ${response.data.length} chats from database`);
                 setPastChats(response.data);
+                
                 if (response.data.length > 0) {
                     const latestChat = response.data[0];
                     setActiveChatId(latestChat.id);
@@ -80,7 +94,8 @@ export const useChatLogic = () => {
                 }
             }
         } catch (error) {
-            console.error("Error loading chats from database:", error);
+            console.error("❌ Error loading chats from database:", error);
+            console.log('⚠️ Falling back to localStorage');
             loadChatsFromLocalStorage();
         }
     };
@@ -90,7 +105,9 @@ export const useChatLogic = () => {
         if (savedChats) {
             try {
                 const parsedChats = JSON.parse(savedChats);
+                console.log(`Loaded ${parsedChats.length} chats from localStorage`);
                 setPastChats(parsedChats);
+                
                 if (parsedChats.length > 0) {
                     setActiveChatId(parsedChats[0].id);
                     setConversation(parsedChats[0].conversation);
@@ -99,17 +116,19 @@ export const useChatLogic = () => {
                     setImageFilePreview(parsedChats[0].imagePreview);
                 }
             } catch (err) {
-                console.error("Error loading chat history:", err);
+                console.error("Error loading chat history from localStorage:", err);
             }
         }
     };
 
     const saveChatToDatabase = async (chatData) => {
         try {
+            console.log('Saving chat to database for user:', userId);
             const response = await axios.post(`${import.meta.env.VITE_PYTHON_HOST}/chats`, {
                 userId: userId,
                 ...chatData
             });
+            console.log('Chat saved to database successfully');
             return response.data;
         } catch (error) {
             console.error("Error saving chat to database:", error);
@@ -119,18 +138,22 @@ export const useChatLogic = () => {
 
     const updateChatInDatabase = async (chatId, conversationData) => {
         try {
+            console.log('🔄 Updating chat in database:', chatId);
             await axios.put(`${import.meta.env.VITE_PYTHON_HOST}/chats/${chatId}`, {
                 conversation: conversationData
             });
+            console.log('✅ Chat updated in database successfully');
         } catch (error) {
-            console.error("Error updating chat in database:", error);
+            console.error("❌ Error updating chat in database:", error);
             throw error;
         }
     };
 
     const deleteChatFromDatabase = async (chatId) => {
         try {
+            console.log('Deleting chat from database:', chatId);
             await axios.delete(`${import.meta.env.VITE_PYTHON_HOST}/chats/${chatId}`);
+            console.log('Chat deleted from database successfully');
         } catch (error) {
             console.error("Error deleting chat from database:", error);
             throw error;
@@ -190,7 +213,7 @@ export const useChatLogic = () => {
             const deepseekRes = await axios.post(`${import.meta.env.VITE_PYTHON_HOST}/deepseek`, {
                 prompt_data: JSON.stringify(context),
             });
-            
+
             let responseText;
             if (typeof deepseekRes.data === 'string') {
                 responseText = deepseekRes.data;
@@ -219,18 +242,22 @@ export const useChatLogic = () => {
             timestamp: new Date().toISOString()
         };
 
+        // Save to database if logged in, otherwise save to localStorage
         if (isLoggedIn && userId) {
             try {
+                console.log('User is logged in, saving to database...');
                 const savedChat = await saveChatToDatabase(newChat);
                 setPastChats(prev => [savedChat, ...prev]);
                 setActiveChatId(savedChat.id);
                 return savedChat.id;
             } catch (error) {
+                console.error('Failed to save to database, falling back to localStorage');
                 setPastChats(prev => [newChat, ...prev]);
                 setActiveChatId(newChat.id);
                 return newChat.id;
             }
         } else {
+            console.log('User not logged in, saving to localStorage');
             setPastChats(prev => [newChat, ...prev]);
             setActiveChatId(newChat.id);
             return newChat.id;
@@ -251,15 +278,22 @@ export const useChatLogic = () => {
 
     const deleteChatFromHistory = async (chatId, e) => {
         e.stopPropagation();
+        
+        // Delete from database if logged in
         if (isLoggedIn && userId) {
             try {
                 await deleteChatFromDatabase(chatId);
+                console.log('Chat deleted from database');
             } catch (error) {
                 console.error("Failed to delete from database:", error);
             }
         }
+        
+        // Remove from local state
         const updatedChats = pastChats.filter(chat => chat.id !== chatId);
         setPastChats(updatedChats);
+        
+        // If deleted chat was active, load another or clear
         if (activeChatId === chatId) {
             if (updatedChats.length > 0) {
                 loadChatFromHistory(updatedChats[0].id);
@@ -292,12 +326,12 @@ export const useChatLogic = () => {
             alert(languageMode === "english" ? "Please select a plant first" : "براہ کرم پہلے پودا منتخب کریں");
             return;
         }
-        
+
         setLoading(true);
         try {
             const base64Image = await getBase64(imageFile);
             const plantDisplayName = getPlantDisplayName(selectedPlant, languageMode);
-            
+
             const loadingMessage = {
                 role: "assistant",
                 content: t.analyzing(plantDisplayName),
@@ -305,11 +339,11 @@ export const useChatLogic = () => {
                 isMarkdown: false
             };
             setConversation([loadingMessage]);
-            
+
             const predictRes = await axios.post(`${import.meta.env.VITE_PYTHON_HOST}/predict`, { image: base64Image });
             const filteredPreds = filterAndNormalizePredictions(predictRes.data, selectedPlant);
             setFilteredPrediction(filteredPreds);
-            
+
             if (filteredPreds && filteredPreds.length > 0) {
                 const analysisResponse = await sendInitialAnalysisToDeepSeek(filteredPreds);
                 const analysisMessage = {
@@ -352,18 +386,18 @@ export const useChatLogic = () => {
             alert(languageMode === "english" ? "Please analyze an image first" : "براہ کرم پہلے تصویر کا تجزیہ کریں");
             return;
         }
-        
-        const userMessage = { 
-            role: "user", 
-            content: customPrompt, 
-            timestamp: new Date().toISOString(), 
-            isMarkdown: false 
+
+        const userMessage = {
+            role: "user",
+            content: customPrompt,
+            timestamp: new Date().toISOString(),
+            isMarkdown: false
         };
         const updatedConversation = [...conversation, userMessage];
         setConversation(updatedConversation);
         setCustomPrompt("");
         setChatLoading(true);
-        
+
         try {
             const context = {
                 plant: selectedPlant,
@@ -379,11 +413,11 @@ export const useChatLogic = () => {
                 language: languageMode,
                 isInitialAnalysis: false
             };
-            
+
             const deepseekRes = await axios.post(`${import.meta.env.VITE_PYTHON_HOST}/deepseek`, {
                 prompt_data: JSON.stringify(context),
             });
-            
+
             let responseText;
             if (typeof deepseekRes.data === 'string') {
                 responseText = deepseekRes.data;
@@ -392,41 +426,45 @@ export const useChatLogic = () => {
             } else {
                 responseText = String(deepseekRes.data);
             }
-            
-            const assistantMessage = { 
-                role: "assistant", 
-                content: responseText, 
-                timestamp: new Date().toISOString(), 
-                isMarkdown: true 
+
+            const assistantMessage = {
+                role: "assistant",
+                content: responseText,
+                timestamp: new Date().toISOString(),
+                isMarkdown: true
             };
             const finalConversation = [...updatedConversation, assistantMessage];
             setConversation(finalConversation);
-            
+
+            // Update in database if logged in
             if (activeChatId) {
                 if (isLoggedIn && userId) {
                     try {
+                        console.log('Updating conversation in database...');
                         await updateChatInDatabase(activeChatId, finalConversation);
                     } catch (error) {
                         console.error("Failed to update chat in database:", error);
                     }
                 }
-                setPastChats(prev => prev.map(chat => 
+                
+                // Update local state
+                setPastChats(prev => prev.map(chat =>
                     chat.id === activeChatId ? { ...chat, conversation: finalConversation } : chat
                 ));
             }
         } catch (err) {
             console.error("Error sending prompt:", err);
-            const errorMessage = { 
-                role: "assistant", 
-                content: t.error, 
-                timestamp: new Date().toISOString(), 
-                isMarkdown: false 
+            const errorMessage = {
+                role: "assistant",
+                content: t.error,
+                timestamp: new Date().toISOString(),
+                isMarkdown: false
             };
             const finalConversation = [...updatedConversation, errorMessage];
             setConversation(finalConversation);
-            
+
             if (activeChatId) {
-                setPastChats(prev => prev.map(chat => 
+                setPastChats(prev => prev.map(chat =>
                     chat.id === activeChatId ? { ...chat, conversation: finalConversation } : chat
                 ));
             }

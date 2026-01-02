@@ -39,6 +39,7 @@ export default function AuthContextProvider({ children }) {
             .catch((err) => {
                 dispatch({ type: "SET_LOGGED_OUT" })
                 localStorage.removeItem("pddtjwt")
+                localStorage.removeItem("userId") 
                 console.error("Error fetching user profile:", err.message)
             })
             .finally(() => {
@@ -60,6 +61,7 @@ export default function AuthContextProvider({ children }) {
     const handleLogout = () => {
         dispatch({ type: "SET_LOGGED_OUT" })
         localStorage.removeItem("pddtjwt")
+        localStorage.removeItem("userId") 
         navigate("/")
     }
 

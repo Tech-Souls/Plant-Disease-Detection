@@ -8,7 +8,7 @@ app.use(express.json());
 app.use(cors());
 config();
 
-mongoose.connect(process.env.MONGOURL, { dbName: "pddetector", })
+mongoose.connect(process.env.MONGO_URI, { dbName: "pddetector", })
     .then(() => {
         console.log("Connected to MongoDB");
     }).catch((err) => {
