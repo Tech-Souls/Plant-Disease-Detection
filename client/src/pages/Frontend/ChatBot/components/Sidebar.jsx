@@ -32,10 +32,11 @@ const Sidebar = ({
             <div className="p-4 border-b border-gray-200 bg-white">
                 <div className="flex items-center justify-between">
                     {!sidebarCollapsed && (
-                        <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                        <h6 className="text-lg font-bold text-gray-800 flex items-center gap-2">
                             <IoChatbubbleOutline />
-                            {t.chatHistory}
-                        </h3>
+                            <strong>{t.chatHistory}</strong>
+                            
+                        </h6>
                     )}
                     <div className="flex items-center gap-2">
                         {!sidebarCollapsed && (

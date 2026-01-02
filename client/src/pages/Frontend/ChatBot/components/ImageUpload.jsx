@@ -51,15 +51,10 @@ const ImageUpload = ({
                         className="absolute top-2 right-2 text-white text-xs bg-red-500 w-5 h-5 flex items-center justify-center rounded-full hover:bg-red-600 transition-colors"
                         onClick={handleClearImage}
                     >
-                        ×
+
                     </button>
                 )}
             </div>
-            {imageFileName && (
-                <p className="mt-1 text-xs text-gray-600">
-                    {t.selected}: {imageFileName}
-                </p>
-            )}
         </div>
     );
 };

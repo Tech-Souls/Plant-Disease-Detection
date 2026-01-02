@@ -20,7 +20,9 @@ export default function OverviewSection() {
                 <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 lg:gap-6 mt-20'>
                     <div className='group flex flex-col justify-center items-center gap-4 h-[35vh] sm:h-[400px] border-2 border-gray-400 border-dashed cursor-pointer rounded-[24px] hover:border-[var(--secondary)]'>
                         <MdOutlineSavedSearch className='text-[50px] text-gray-500 group-hover:text-[var(--secondary)]' />
-                        <button className='text-[18px] text-gray-700 group-hover:text-[var(--secondary)]'>Start diagnosing</button>
+                        <button 
+                        onClick={handleClick}
+                        className='text-[18px] text-gray-700 group-hover:text-[var(--secondary)]'>Start diagnosing</button>
                     </div>
                     <div className='h-[35vh] sm:h-[400px] rounded-[24px]'>
                         <img src={overview1} alt="overview1" className='w-full h-full rounded-[24px]' />

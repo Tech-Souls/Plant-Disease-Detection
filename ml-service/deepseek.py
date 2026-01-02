@@ -9,7 +9,7 @@ def api_call(model_output):
         )
 
         system_prompt = """
-You are a helpful agricultural assistant. You will receive plant disease predictions from an image analysis.
+Your name is Blossom AI and You are a helpful agricultural assistant. You will receive plant disease predictions from an image analysis.
 
 **When isInitialAnalysis is true:**
 - Provide a comprehensive analysis of what might be affecting the plant
@@ -74,26 +74,19 @@ The disease is Fusarium Wilt
             context = {"userQuestion": model_output}
         
         # Build user prompt with location context
-        user_prompt = f"""
-Please analyze these plant disease prediction results and provide helpful advice:
-
-{model_output}
-
-"""
+        user_prompt = f"{model_output}"
         
         # Add location context if available
         if context.get("location_details"):
             location = context["location_details"]
-            user_prompt += f"""
+            system_prompt += f"""
 **User's Location:**
 - City: {location.get('city', 'Unknown')}
 - State/Region: {location.get('state', 'Unknown')}
 - Country: {location.get('country', 'Unknown')}
 
-Please provide location-specific recommendations based on this information.
+Please provide location-specific recommendations based on this information. Like name a specific place the user can go to. At the very least, name a helpline.
 """
-
-        user_prompt += "\nProvide your answer in plain text format. Do not use JSON or markdown."
 
         messages = [
             {"role": "system", "content": system_prompt},
