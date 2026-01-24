@@ -317,7 +317,7 @@ export const useChatLogic = () => {
                 : "کیڑے کش دکان زراعی سامان فنگسائیڈ پودوں کی دوا فارمیسی";
 
             // Call Apify actor
-            const apifyToken = "apify_api_nSKKhQsEqXO0AgTLGu6lnCcGUtmygh3IWKcB";
+            const apifyToken = import.meta.env.VITE_APIFY_API_TOKEN;
             const apifyActorId = "compass~crawler-google-places";
 
             const actorRunUrl = `https://api.apify.com/v2/acts/${apifyActorId}/runs`;
