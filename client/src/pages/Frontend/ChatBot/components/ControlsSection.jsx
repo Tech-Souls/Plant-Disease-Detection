@@ -1,5 +1,6 @@
 import React from "react";
-import { IoMenu, IoLanguage } from "react-icons/io5";
+import { IoMenu, IoLanguage, IoArrowBack } from "react-icons/io5";
+import { useNavigate } from "react-router-dom";
 import ImageUpload from "./ImageUpload";
 import PlantSelector from "./PlantSelector";
 
@@ -23,6 +24,8 @@ const ControlsSection = ({
     handleSubmit,
     loading
 }) => {
+    const navigate = useNavigate();
+    
     return (
         <div className="w-full p-4 sm:p-6 xl:py-6 xl:px-12 bg-white border-b border-gray-200">
             <div className="max-w-6xl mx-auto">
@@ -43,15 +46,27 @@ const ControlsSection = ({
                             </p>
                         </div>
                     </div>
-                    <button
-                        onClick={toggleLanguageMode}
-                        className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors self-start md:self-auto"
-                    >
-                        <IoLanguage className="text-lg" />
-                        <span className="font-medium">
-                            {languageMode === "english" ? "اردو" : "English"}
-                        </span>
-                    </button>
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={() => navigate('/')}
+                            className="flex items-center gap-4 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
+                            title={languageMode === "english" ? "Back to Home" : "گھر واپس جائیں"}
+                        >
+                            <IoArrowBack className="text-lg" />
+                            <span className="hidden sm:inline font-medium">
+                                {languageMode === "english" ? "Home" : "گھر"}
+                            </span>
+                        </button>
+                        <button
+                            onClick={toggleLanguageMode}
+                            className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
+                        >
+                            <IoLanguage className="text-lg" />
+                            <span className="font-small">
+                                {languageMode === "english" ? "اردو" : "English"}
+                            </span>
+                        </button>
+                    </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

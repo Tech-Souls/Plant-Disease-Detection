@@ -1,5 +1,4 @@
-import React from "react";
-import { IoClose } from "react-icons/io5";
+import React, { useEffect } from "react";
 import Sidebar from "./components/Sidebar";
 import ControlsSection from "./components/ControlsSection";
 import ChatSection from "./components/ChatSection";
@@ -45,17 +44,59 @@ const AIModel = () => {
         startNewChat
     } = useChatLogic();
 
+    // Apply Nastaleeq font to elements containing Urdu text
+    useEffect(() => {
+        const applyUrduFont = () => {
+            const allElements = document.querySelectorAll('*');
+            const urduRegex = /[\u0600-\u06FF]/; // Arabic/Urdu Unicode range
+            
+            allElements.forEach(element => {
+                if (element.textContent && urduRegex.test(element.textContent)) {
+                    element.style.fontFamily = "'Noto Nastaliq Urdu', 'Noto Sans', sans-serif";
+                    element.style.lineHeight = "2.2";
+                }
+            });
+        };
+
+        // Apply on mount and whenever language changes
+        applyUrduFont();
+        
+        // Re-apply when DOM changes
+        const observer = new MutationObserver(applyUrduFont);
+        observer.observe(document.body, { 
+            childList: true, 
+            subtree: true, 
+            characterData: true 
+        });
+
+        return () => observer.disconnect();
+    }, [languageMode, conversation, pastChats]);
+
     return (
         <div className="flex flex-col md:flex-row w-full min-h-screen">
             <style>
                 {`
-                @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;500;700&family=Noto+Sans:wght@400;500;700&display=swap');
+                @import url('https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;500;600;700&family=Noto+Sans:wght@400;500;700&display=swap');
+                
                 .mixed-text {
-                    font-family: 'Noto Sans Arabic', 'Noto Sans', 'Segoe UI', Tahoma, Geneva, sans-serif;
-                    line-height: 1.8;
+                    font-family: 'Noto Nastaliq Urdu', 'Noto Sans', 'Segoe UI', Tahoma, Geneva, sans-serif;
+                    line-height: 2.2;
                     unicode-bidi: plaintext;
                     text-align: start;
                 }
+                
+                /* Apply Nastaleeq to any element containing Urdu characters */
+                *[lang="ur"],
+                *[dir="rtl"] {
+                    font-family: 'Noto Nastaliq Urdu', 'Noto Sans', sans-serif !important;
+                    line-height: 2.2 !important;
+                }
+                
+                /* Ensure all text elements can use Nastaleeq */
+                button, input, select, textarea, label, p, span, div, h1, h2, h3, h4, h5, h6, li, a {
+                    font-variant-ligatures: normal;
+                }
+                
                 @media (max-width: 768px) {
                     .sidebar-mobile {
                         position: fixed;

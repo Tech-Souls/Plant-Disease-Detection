@@ -18,6 +18,7 @@ Your name is Blossom AI and You are a helpful agricultural assistant. You will r
 - Focus on the most likely issues first
 - Provide initial treatment recommendations
 - Be encouraging and practical
+- **IMPORTANT:** If nearbyPlaces data is available (provided below), you MUST include a section with specific local recommendations mentioning actual business names, phone numbers, and websites. This is MANDATORY in the initial response.
 
 **When isInitialAnalysis is false:**
 - Answer the user's specific question
@@ -25,30 +26,27 @@ Your name is Blossom AI and You are a helpful agricultural assistant. You will r
 - Reference the initial analysis if relevant
 - Continue the conversation naturally
 
-**LOCATION-AWARE RECOMMENDATIONS:**
-When location information is provided (location_details), you should:
-- Consider the local climate and agricultural conditions
-- Suggest LOCAL resources when relevant:
-  * Nearby agricultural stores for pesticides/fungicides
-  * Local plant nurseries for healthy plants/seeds
-  * Pharmacies that might stock plant care products
-  * Local agricultural extension offices or experts
-- Mention the user's city/region when making recommendations
-- Consider seasonal factors based on their location
-- Suggest locally available treatments and products
+**MANDATORY LOCATION-AWARE RECOMMENDATIONS:**
+**If nearbyPlaces array contains data:** You MUST include these places in your response, even in the initial analysis. Always:
+- Use the actual nearby places data to make SPECIFIC recommendations
+- Name actual places (pharmacies, agricultural stores) from the provided list
+- Include their contact information (phone/website) when available
+- Create a dedicated section or paragraph mentioning where to get treatment/supplies
+- Make it clear these are real, nearby businesses the user can visit
 
-**Format for location-based suggestions:**
-When the user asks WHERE to get treatments or supplies:
-1. First, acknowledge their location (city/region)
-2. Suggest types of stores to look for (e.g., "agricultural supply stores", "plant nurseries")
-3. Mention common chain stores if applicable to their country
-4. Suggest they can find places by searching: "agricultural store near [their city]" or "plant pharmacy in [their area]"
-5. If it's a serious issue, recommend contacting local agricultural extension services
+**FORMAT FOR NEARBY PLACES (when available):**
+Include a section like:
+"**Where to Get Treatment:**
+Near you, I found these resources:
+1. [Business Name] - [Phone] - [Website]
+2. [Business Name] - [Phone] - [Website]
+(etc)"
 
-**Examples:**
-- "In Lahore, you can find these products at agricultural supply stores in areas like Township or Ferozepur Road."
-- "Since you're in [City], I recommend visiting local plant nurseries or agricultural stores. You can search for 'agricultural store near me' to find options."
-- "For your location in [Region], contact your local agricultural extension office for expert advice on this disease."
+When recommending, mention these places BY NAME and provide their contact details.
+
+**Examples of good responses with nearbyPlaces:**
+- "In Faisalabad, I found Khan Agricultural Store that can provide you with fungicide at +92-41-xxx. Their website is www.example.com. Also, Faisalabad Pharmacy at +92-41-yyy carries plant care products."
+- "For your wheat leaf spot disease, I recommend visiting [Store Name] at [phone] where they have the specific treatment you need. I also found [Pharmacy Name] nearby at [phone]."
 
 **For chickpeas the severity levels are:**
 1: Highly Resistant (HR): The plant has been wilted by 0%-10%
@@ -61,8 +59,9 @@ The disease is Fusarium Wilt
 **Always:**
 - Respond in the user's preferred language (English or Urdu)
 - Don't use technical jargon
+- Naming specific places with Names and Contact info is VERY important.
 - Focus on actionable advice
-- Use location information to provide LOCAL and PRACTICAL recommendations
+- In INITIAL ANALYSIS with nearbyPlaces: ALWAYS include specific place recommendations with phone and website
 - Suggest consulting local experts for serious cases
 """
         
@@ -85,8 +84,25 @@ The disease is Fusarium Wilt
 - State/Region: {location.get('state', 'Unknown')}
 - Country: {location.get('country', 'Unknown')}
 
-Please provide location-specific recommendations based on this information. Like name a specific place the user can go to. At the very least, name a helpline.
+Please provide location-specific recommendations based on this information.
 """
+        
+        # Add nearby places from Apify if available
+        if context.get("nearbyPlaces") and len(context["nearbyPlaces"]) > 0:
+            places = context["nearbyPlaces"]
+            places_context = "\n**NEARBY BUSINESSES & SERVICES (From Local Search):**\n"
+            for i, place in enumerate(places[:10], 1):  # Limit to 10 places
+                places_context += f"\n{i}. {place.get('title', 'Unknown')}\n"
+                if place.get('address'):
+                    places_context += f"   Address: {place.get('address')}\n"
+                if place.get('phone'):
+                    places_context += f"   Phone: {place.get('phone')}\n"
+                if place.get('website'):
+                    places_context += f"   Website: {place.get('website')}\n"
+                if place.get('type'):
+                    places_context += f"   Type: {place.get('type')}\n"
+            
+            system_prompt += places_context + "\n\nWhen recommending solutions, refer to these nearby places by name and provide their contact information."
 
         messages = [
             {"role": "system", "content": system_prompt},
@@ -95,7 +111,8 @@ Please provide location-specific recommendations based on this information. Like
 
         response = client.chat.completions.create(
             model="nex-agi/DeepSeek-V3.1-Nex-N1",
-            messages=messages
+            messages=messages,
+            temperature=0.6
         )
 
         output = response.choices[0].message.content

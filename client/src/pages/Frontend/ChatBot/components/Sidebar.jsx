@@ -9,6 +9,8 @@ import {
     IoLocationOutline
 } from "react-icons/io5";
 
+// Updated Sidebar.jsx - Remove button, show status only
+
 const Sidebar = ({
     sidebarOpen,
     sidebarCollapsed,
@@ -22,7 +24,7 @@ const Sidebar = ({
     userLocation,
     locationLoading,
     locationError,
-    getUserLocation,
+    retryGetLocation, // Add retry function
     t,
     languageMode
 }) => {
@@ -35,7 +37,6 @@ const Sidebar = ({
                         <h6 className="text-lg font-bold text-gray-800 flex items-center gap-2">
                             <IoChatbubbleOutline />
                             <strong>{t.chatHistory}</strong>
-                            
                         </h6>
                     )}
                     <div className="flex items-center gap-2">
@@ -124,7 +125,7 @@ const Sidebar = ({
                 )}
             </div>
 
-            {/* Location Section */}
+            {/* Location Status Section - NO BUTTON */}
             {!sidebarCollapsed && (
                 <div className="p-4 border-t border-gray-200 bg-white">
                     <div className="flex items-center justify-between mb-2">
@@ -134,7 +135,7 @@ const Sidebar = ({
                         </h4>
                         {userLocation && (
                             <span className="text-xs px-2 py-1 bg-green-100 text-green-800 rounded-full">
-                                ✓ {languageMode === "english" ? "Enabled" : "فعال"}
+                                ✓ {languageMode === "english" ? "Active" : "فعال"}
                             </span>
                         )}
                     </div>
@@ -145,30 +146,41 @@ const Sidebar = ({
                             {t.gettingLocation}
                         </div>
                     ) : userLocation ? (
-                        <div className="text-xs text-gray-600">
-                            <p className="mb-1">
+                        <div className="text-xs text-gray-600 bg-green-50 p-2 rounded">
+                            <p className="mb-1 text-green-700 font-medium">
                                 {languageMode === "english"
-                                    ? "Location enabled for local recommendations"
-                                    : "مقامی سفارشات کے لیے مقام فعال ہے"}
+                                    ? "✓ Location enabled for local recommendations"
+                                    : "✓ مقامی سفارشات کے لیے مقام فعال ہے"}
                             </p>
-                            <p className="text-gray-400">
+                            <p className="text-gray-500 text-[10px]">
                                 Lat: {userLocation.latitude.toFixed(4)}, Long: {userLocation.longitude.toFixed(4)}
                             </p>
                         </div>
-                    ) : (
-                        <div>
-                            {locationError ? (
-                                <p className="text-xs text-red-600 mb-2">{locationError}</p>
-                            ) : (
-                                <p className="text-xs text-gray-600 mb-2">{t.locationAccess}</p>
-                            )}
+                    ) : locationError ? (
+                        <div className="text-xs">
+                            <div className="bg-red-50 border border-red-200 rounded p-2 mb-2">
+                                <p className="text-red-600 mb-1">{locationError}</p>
+                                <p className="text-gray-600">
+                                    {languageMode === "english"
+                                        ? "Enable location in your browser settings for local recommendations."
+                                        : "مقامی سفارشات کے لیے اپنے براؤزر میں مقام فعال کریں۔"}
+                                </p>
+                            </div>
                             <button
-                                onClick={getUserLocation}
+                                onClick={retryGetLocation}
                                 className="w-full px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
                             >
                                 <IoLocationOutline />
-                                {t.enableLocation}
+                                {languageMode === "english" ? "Retry" : "دوبارہ کوشش کریں"}
                             </button>
+                        </div>
+                    ) : (
+                        <div className="text-xs text-gray-600 bg-yellow-50 border border-yellow-200 rounded p-2">
+                            <p>
+                                {languageMode === "english"
+                                    ? "Waiting for location access..."
+                                    : "مقام تک رسائی کا انتظار ہے..."}
+                            </p>
                         </div>
                     )}
                 </div>

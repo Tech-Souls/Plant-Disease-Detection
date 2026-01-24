@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans&family=Noto+Naskh+Arabic&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans&family=Noto+Nastaliq+Urdu:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
 :root {
@@ -144,22 +144,49 @@ input:focus {
     }
 }
 
-/* Urdu/RTL text support */
+/* Urdu/RTL text support with Nastaleeq font */
+/* Apply Nastaleeq to any text that contains Urdu characters */
 
 .urdu-support {
-    font-family: 'Noto Naskh Arabic', 'Noto Sans', 'Segoe UI', Tahoma, Geneva, sans-serif;
-    line-height: 1.8;
+    font-family: 'Noto Nastaliq Urdu', 'Noto Sans', 'Segoe UI', Tahoma, Geneva, sans-serif;
+    line-height: 2.2;
     text-align: right;
 }
 
-/* For mixed LTR/RTL text */
+/* For mixed LTR/RTL text - will auto-detect and use Nastaleeq for Urdu */
 .mixed-text {
+    font-family: 'Noto Nastaliq Urdu', 'Noto Sans', 'Segoe UI', Tahoma, Geneva, sans-serif;
     unicode-bidi: plaintext;
     text-align: start;
+    line-height: 2.2;
 }
 
 /* Better word breaking for Urdu */
 .urdu-text {
     word-break: keep-all;
     overflow-wrap: anywhere;
+    font-family: 'Noto Nastaliq Urdu', 'Noto Sans', sans-serif;
+    line-height: 2.2;
+}
+
+/* Global Urdu text styling - applies Nastaleeq to all elements with Urdu Unicode range */
+*:lang(ur),
+[lang="ur"],
+[dir="rtl"] {
+    font-family: 'Noto Nastaliq Urdu', 'Noto Sans', sans-serif !important;
+    line-height: 2.2;
+}
+
+/* Ensure buttons and inputs with Urdu text use Nastaleeq */
+button:lang(ur),
+input:lang(ur),
+select:lang(ur),
+textarea:lang(ur) {
+    font-family: 'Noto Nastaliq Urdu', 'Noto Sans', sans-serif !important;
+    line-height: 2.2;
+}
+
+/* Override for any element that might contain Urdu - check for Urdu Unicode range (U+0600 to U+06FF) */
+:is(p, span, div, h1, h2, h3, h4, h5, h6, li, a, button, input, select, textarea, label):has-text-urdu {
+    font-family: 'Noto Nastaliq Urdu', 'Noto Sans', sans-serif !important;
 }

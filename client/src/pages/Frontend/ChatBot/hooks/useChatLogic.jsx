@@ -24,6 +24,9 @@ export const useChatLogic = () => {
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [userId, setUserId] = useState(null);
+    const [apifyResults, setApifyResults] = useState(null);
+    const [apifyLoading, setApifyLoading] = useState(false);
+    const [apifyUsedInChat, setApifyUsedInChat] = useState(false);
 
     const imageFileRef = useRef(null);
     const chatContainerRef = useRef(null);
@@ -36,13 +39,13 @@ export const useChatLogic = () => {
             try {
                 const token = localStorage.getItem('pddtjwt');
                 const storedUserId = localStorage.getItem('userId');
-                
-                console.log('Auth Check:', { 
-                    hasToken: !!token, 
+
+                console.log('Auth Check:', {
+                    hasToken: !!token,
                     hasUserId: !!storedUserId,
-                    userId: storedUserId 
+                    userId: storedUserId
                 });
-                
+
                 if (token && storedUserId) {
                     setIsLoggedIn(true);
                     setUserId(storedUserId);
@@ -75,16 +78,126 @@ export const useChatLogic = () => {
             localStorage.setItem('plantChatHistory', JSON.stringify(pastChats));
         }
     }, [pastChats, isLoggedIn]);
+    useEffect(() => {
+        const requestLocation = () => {
+            if (!navigator.geolocation) {
+                setLocationError(
+                    languageMode === "english"
+                        ? "Geolocation is not supported by your browser"
+                        : "آپ کا براؤزر جغرافیائی مقام کو سپورٹ نہیں کرتا"
+                );
+                return;
+            }
+            setLocationLoading(true);
+            setLocationError(null);
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    setUserLocation({
+                        latitude: position.coords.latitude,
+                        longitude: position.coords.longitude,
+                        accuracy: position.coords.accuracy
+                    });
+                    setLocationLoading(false);
+                    console.log('Location obtained:', {
+                        lat: position.coords.latitude,
+                        lng: position.coords.longitude
+                    });
+                },
+                (error) => {
+                    console.error("Geolocation error:", error);
+                    let errorMsg;
+                    switch (error.code) {
+                        case error.PERMISSION_DENIED:
+                            errorMsg = languageMode === "english"
+                                ? "Location access denied. Please enable location in your browser settings."
+                                : "مقام تک رسائی مسترد۔ براہ کرم اپنے براؤزر کی ترتیبات میں مقام کو فعال کریں۔";
+                            break;
+                        case error.POSITION_UNAVAILABLE:
+                            errorMsg = languageMode === "english"
+                                ? "Location information unavailable."
+                                : "مقام کی معلومات دستیاب نہیں۔";
+                            break;
+                        case error.TIMEOUT:
+                            errorMsg = languageMode === "english"
+                                ? "Location request timed out."
+                                : "مقام کی درخواست ٹائم آؤٹ ہو گئی۔";
+                            break;
+                        default:
+                            errorMsg = languageMode === "english"
+                                ? "An unknown error occurred."
+                                : "ایک نامعلوم خرابی پیش آئی۔";
+                    }
+                    setLocationError(errorMsg);
+                    setLocationLoading(false);
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 300000 // Cache for 5 minutes
+                }
+            );
+        };
+
+        requestLocation();
+
+        const watchId = navigator.geolocation?.watchPosition(
+            (position) => {
+                setUserLocation({
+                    latitude: position.coords.latitude,
+                    longitude: position.coords.longitude,
+                    accuracy: position.coords.accuracy
+                });
+            },
+            null,
+            {
+                enableHighAccuracy: false,
+                maximumAge: 600000 // Update every 10 minutes max
+            }
+        );
+
+        return () => {
+            if (watchId) {
+                navigator.geolocation.clearWatch(watchId);
+            }
+        };
+    }, [languageMode]); // Re-run if language changes for error messages
+
+    const retryGetLocation = () => {
+        if (!navigator.geolocation) {
+            setLocationError(t.locationError);
+            return;
+        }
+
+        setLocationLoading(true);
+        setLocationError(null);
+
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                setUserLocation({
+                    latitude: position.coords.latitude,
+                    longitude: position.coords.longitude,
+                    accuracy: position.coords.accuracy
+                });
+                setLocationLoading(false);
+            },
+            (error) => {
+                console.error("Geolocation error:", error);
+                setLocationError(t.locationError);
+                setLocationLoading(false);
+            },
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
+    };
 
     const loadChatsFromDatabase = async (userId) => {
         try {
             console.log('Loading chats from database for user:', userId);
             const response = await axios.get(`${import.meta.env.VITE_PYTHON_HOST}/chats/${userId}`);
-            
+
             if (response.data && Array.isArray(response.data)) {
                 console.log(`Loaded ${response.data.length} chats from database`);
                 setPastChats(response.data);
-                
+
                 if (response.data.length > 0) {
                     const latestChat = response.data[0];
                     setActiveChatId(latestChat.id);
@@ -112,7 +225,7 @@ export const useChatLogic = () => {
                 const parsedChats = JSON.parse(savedChats);
                 console.log(`Loaded ${parsedChats.length} chats from localStorage`);
                 setPastChats(parsedChats);
-                
+
                 if (parsedChats.length > 0) {
                     setActiveChatId(parsedChats[0].id);
                     setConversation(parsedChats[0].conversation);
@@ -193,12 +306,105 @@ export const useChatLogic = () => {
         );
     };
 
+    const fetchApifyResults = async (latitude, longitude, plant) => {
+        try {
+            setApifyLoading(true);
+            console.log('Fetching Apify results for location:', { latitude, longitude });
+
+            // Create targeted search query for pesticides and agricultural supplies
+            const searchQuery = languageMode === "english"
+                ? "pesticide shop agricultural supplies fungicide dealer plant medicine pharmacy"
+                : "کیڑے کش دکان زراعی سامان فنگسائیڈ پودوں کی دوا فارمیسی";
+
+            // Call Apify actor
+            const apifyToken = import.meta.env.VITE_APIFY_API_TOKEN;
+            const apifyActorId = "compass~crawler-google-places";
+
+            const actorRunUrl = `https://api.apify.com/v2/acts/${apifyActorId}/runs`;
+            const inputData = {
+                searchString: searchQuery,
+                maxResults: 5, 
+                lat: latitude,
+                lng: longitude
+            };
+
+            const response = await axios.post(actorRunUrl, inputData, {
+                params: { token: apifyToken },
+                headers: { "Content-Type": "application/json" }
+            });
+
+            console.log('Apify API response status:', response.status);
+            console.log('Apify API response:', response.data);
+
+            if (response.status !== 201 && response.status !== 200) {
+                throw new Error(`Apify API error: ${response.status}`);
+            }
+
+            const runData = response.data.data;
+            const runId = runData.id;
+            const datasetId = runData.defaultDatasetId;
+
+            console.log('Apify run started:', { runId, datasetId });
+
+            // Poll for results
+            let status = runData.status;
+            let attempts = 0;
+            const maxAttempts = 60; // 5 minutes max with 5 second intervals
+
+            while (status !== "SUCCEEDED" && status !== "FAILED" && status !== "ABORTED" && attempts < maxAttempts) {
+                await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
+                attempts++;
+
+                const statusResponse = await axios.get(
+                    `https://api.apify.com/v2/actor-runs/${runId}`,
+                    { params: { token: apifyToken } }
+                );
+                status = statusResponse.data.data.status;
+                console.log(`Apify status check ${attempts}: ${status}`);
+            }
+
+            if (status === "SUCCEEDED") {
+                // Fetch results from dataset
+                const datasetUrl = `https://api.apify.com/v2/datasets/${datasetId}/items`;
+                const resultsResponse = await axios.get(datasetUrl, {
+                    params: { token: apifyToken }
+                });
+
+                const places = resultsResponse.data.map(place => ({
+                    title: place.title,
+                    website: place.website,
+                    phone: place.phone,
+                    address: place.address,
+                    type: place.type || "Business"
+                }));
+
+                console.log(`Apify returned ${places.length} places:`, places);
+                setApifyResults(places);
+                setApifyUsedInChat(true);
+                console.log('State updated - apifyResults set to:', places);
+                return places;
+            } else {
+                console.warn('Apify run did not succeed:', status);
+                setApifyResults([]);
+                setApifyUsedInChat(true);
+                return [];
+            }
+        } catch (error) {
+            console.error("Error fetching Apify results:", error);
+            setApifyResults([]);
+            setApifyUsedInChat(true);
+            return [];
+        } finally {
+            setApifyLoading(false);
+        }
+    };
+
     const handleFileChange = async (e) => {
         const file = e.target.files[0];
         setImageFile(file);
         setImageFileName(file.name);
         setImageFilePreview(URL.createObjectURL(file));
-        
+
         // Convert to base64 for storage
         try {
             const base64 = await getBase64(file);
@@ -224,11 +430,18 @@ export const useChatLogic = () => {
                 userQuestion: t.initialAnalysisPrompt,
                 language: languageMode,
                 location: userLocation,
+                nearbyPlaces: apifyResults || [],
                 isInitialAnalysis: true
             };
+            
+            console.log('Sending to DeepSeek with context:', context);
+            console.log('nearbyPlaces being sent:', apifyResults);
+            
             const deepseekRes = await axios.post(`${import.meta.env.VITE_PYTHON_HOST}/deepseek`, {
                 prompt_data: JSON.stringify(context),
             });
+
+            console.log('DeepSeek response:', deepseekRes.data);
 
             let responseText;
             if (typeof deepseekRes.data === 'string') {
@@ -298,7 +511,7 @@ export const useChatLogic = () => {
 
     const deleteChatFromHistory = async (chatId, e) => {
         e.stopPropagation();
-        
+
         // Delete from database if logged in
         if (isLoggedIn && userId) {
             try {
@@ -308,11 +521,11 @@ export const useChatLogic = () => {
                 console.error("Failed to delete from database:", error);
             }
         }
-        
+
         // Remove from local state
         const updatedChats = pastChats.filter(chat => chat.id !== chatId);
         setPastChats(updatedChats);
-        
+
         // If deleted chat was active, load another or clear
         if (activeChatId === chatId) {
             if (updatedChats.length > 0) {
@@ -337,6 +550,8 @@ export const useChatLogic = () => {
         setImageFilePreview(null);
         setImageBase64(null);
         setActiveChatId(null);
+        setApifyResults(null);
+        setApifyUsedInChat(false);
     };
 
     const handleSubmit = async () => {
@@ -361,6 +576,19 @@ export const useChatLogic = () => {
                 isMarkdown: false
             };
             setConversation([loadingMessage]);
+
+            // Reset Apify state for new chat
+            setApifyUsedInChat(false);
+            setApifyResults(null);
+
+            // Fetch Apify results if location is available and not yet used
+            if (userLocation && !apifyUsedInChat) {
+                console.log('Starting Apify fetch for location-based places...');
+                const apifyData = await fetchApifyResults(userLocation.latitude, userLocation.longitude, selectedPlant);
+                console.log('Apify data fetched in handleSubmit:', apifyData);
+            } else {
+                console.log('Apify not called:', { hasLocation: !!userLocation, apifyUsedInChat });
+            }
 
             const predictRes = await axios.post(`${import.meta.env.VITE_PYTHON_HOST}/predict`, { image: base64Image });
             const filteredPreds = filterAndNormalizePredictions(predictRes.data, selectedPlant);
@@ -432,6 +660,7 @@ export const useChatLogic = () => {
                 userQuestion: customPrompt,
                 conversation: conversation.slice(-3).map(msg => ({ role: msg.role, content: msg.content })),
                 location: userLocation,
+                nearbyPlaces: apifyResults || [],
                 language: languageMode,
                 isInitialAnalysis: false
             };
@@ -468,7 +697,7 @@ export const useChatLogic = () => {
                         console.error("Failed to update chat in database:", error);
                     }
                 }
-                
+
                 // Update local state
                 setPastChats(prev => prev.map(chat =>
                     chat.id === activeChatId ? { ...chat, conversation: finalConversation } : chat
@@ -530,6 +759,9 @@ export const useChatLogic = () => {
         sendCustomPrompt,
         loadChatFromHistory,
         deleteChatFromHistory,
-        startNewChat
+        startNewChat,
+        apifyResults,
+        apifyLoading,
+        fetchApifyResults
     };
 };
