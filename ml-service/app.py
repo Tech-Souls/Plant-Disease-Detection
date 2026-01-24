@@ -15,7 +15,10 @@ from bson import ObjectId
 import os
 
 app = FastAPI()
-origins = ['*']
+origins = [
+    "https://plant-dd.vercel.app",
+    "http://localhost:5173",
+]
 
 app.add_middleware(
     CORSMiddleware,

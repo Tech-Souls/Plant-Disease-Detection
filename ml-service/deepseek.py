@@ -4,8 +4,8 @@ def api_call(model_output):
     output = None
     try:
         client = OpenAI(
-            api_key="sk-c749d369622646aeaf909f89b33e2648",
-            base_url="https://api.deepseek.com"
+            api_key="sk-amrprsxvkrdvshudmmlslcpavayenizgiizmfxxnvmasgecm",
+            base_url="https://api.siliconflow.com/v1"
         )
 
         system_prompt = """
@@ -94,7 +94,7 @@ Please provide location-specific recommendations based on this information. Like
         ]
 
         response = client.chat.completions.create(
-            model="deepseek-chat",
+            model="nex-agi/DeepSeek-V3.1-Nex-N1",
             messages=messages
         )
 
