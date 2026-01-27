@@ -5,3 +5,8 @@ torchvision
 pillow
 timm
 pydantic
+gdown
+openai
+pymongo
+python-dotenv
+requests
