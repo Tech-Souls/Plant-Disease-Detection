@@ -1,5 +1,6 @@
 fastapi==0.127.0
 uvicorn==0.40.0
+pymongo>=4.6.0
 
 numpy==1.26.4
 pillow==11.2.1
