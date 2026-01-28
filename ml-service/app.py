@@ -16,8 +16,7 @@ import os
 
 app = FastAPI()
 origins = [
-    "https://plant-dd.vercel.app",
-    "http://localhost:5173",
+    "*"
 ]
 
 app.add_middleware(
