@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import List, Optional
@@ -18,37 +19,22 @@ from deepseek import api_call
 # Initialize FastAPI app
 app = FastAPI(title="Plant Disease Detection API")
 
-# Ultra-permissive CORS middleware - Manual implementation
-@app.middleware("http")
-async def add_cors_headers(request: Request, call_next):
-    """Add CORS headers to every response"""
-    response = await call_next(request)
-    
-    # Get origin from request
-    origin = request.headers.get("origin", "*")
-    
-    # Add CORS headers
-    response.headers["Access-Control-Allow-Origin"] = origin
-    response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
-    response.headers["Access-Control-Allow-Headers"] = "*"
-    response.headers["Access-Control-Allow-Credentials"] = "false"
-    response.headers["Access-Control-Max-Age"] = "3600"
-    
-    return response
-
-# Handle all OPTIONS requests
-@app.options("/{full_path:path}")
-async def options_handler(full_path: str):
-    """Handle all OPTIONS preflight requests"""
-    return JSONResponse(
-        content={"status": "ok"},
-        headers={
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-            "Access-Control-Allow-Headers": "*",
-            "Access-Control-Max-Age": "3600",
-        }
-    )
+# Add CORS middleware - Use FastAPI's built-in middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "https://plant-dd.vercel.app",
+        "http://localhost:3000",
+        "http://localhost:5173",  # Vite default
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:5173",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["*"],
+    max_age=600,  # Cache preflight for 10 minutes
+)
 
 # MongoDB Configuration
 MONGO_URI = os.getenv("MONGO_URI")
@@ -117,11 +103,11 @@ def predict_disease(req: ImageRequest):
         
         model_path = os.path.join(os.getcwd(), "model", "18_Epoch.pth")
         if not os.path.exists(model_path):
-            raise HTTPException(500, "Model not found")
+            raise HTTPException(status_code=500, detail="Model not found")
         
         return predict(model_path, img)
     except Exception as e:
-        raise HTTPException(500, str(e))
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/deepseek")
 def deepseek_query(req: DeepSeekRequest):
@@ -136,13 +122,13 @@ def deepseek_query(req: DeepSeekRequest):
                 return {"response": result}
         return result
     except Exception as e:
-        raise HTTPException(500, str(e))
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/chats")
 def create_chat(chat: ChatCreate):
     db = get_database()
     if not db:
-        raise HTTPException(503, "Database unavailable")
+        raise HTTPException(status_code=503, detail="Database unavailable")
     
     doc = {
         "id": chat.id,
@@ -174,11 +160,11 @@ def get_chats(user_id: str):
 def update_chat(chat_id: str, chat: ChatUpdate):
     db = get_database()
     if not db:
-        raise HTTPException(503, "Database unavailable")
+        raise HTTPException(status_code=503, detail="Database unavailable")
     
     result = db.update_one({"id": chat_id}, {"$set": {"conversation": chat.conversation}})
     if result.matched_count == 0:
-        raise HTTPException(404, "Chat not found")
+        raise HTTPException(status_code=404, detail="Chat not found")
     
     return {"ok": True}
 
@@ -186,10 +172,24 @@ def update_chat(chat_id: str, chat: ChatUpdate):
 def delete_chat(chat_id: str):
     db = get_database()
     if not db:
-        raise HTTPException(503, "Database unavailable")
+        raise HTTPException(status_code=503, detail="Database unavailable")
     
     result = db.delete_one({"id": chat_id})
     if result.deleted_count == 0:
-        raise HTTPException(404, "Chat not found")
+        raise HTTPException(status_code=404, detail="Chat not found")
     
     return {"ok": True}
+
+# Optional: Add this if you want to allow all origins (less secure)
+# For development/testing only
+@app.middleware("http")
+async def catch_all_cors(request: Request, call_next):
+    response = await call_next(request)
+    
+    # Only add CORS headers if they're not already set
+    if "Access-Control-Allow-Origin" not in response.headers:
+        response.headers["Access-Control-Allow-Origin"] = "*"
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "*"
+    
+    return response
