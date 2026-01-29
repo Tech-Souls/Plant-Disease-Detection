@@ -1,5 +1,4 @@
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import List, Optional
@@ -17,61 +16,76 @@ from inference import predict
 from deepseek import api_call
 
 # Initialize FastAPI app
-app = FastAPI(title="Plant Disease Detection API", version="1.0.0")
+app = FastAPI(title="Plant Disease Detection API")
 
-# CORS Configuration - Completely rewritten
-FRONTEND_URL = "https://plant-dd.vercel.app"
-LOCAL_URLS = ["http://localhost:5173", "http://localhost:3000", "http://127.0.0.1:5173", "http://127.0.0.1:3000"]
+# Ultra-permissive CORS middleware - Manual implementation
+@app.middleware("http")
+async def add_cors_headers(request: Request, call_next):
+    """Add CORS headers to every response"""
+    response = await call_next(request)
+    
+    # Get origin from request
+    origin = request.headers.get("origin", "*")
+    
+    # Add CORS headers
+    response.headers["Access-Control-Allow-Origin"] = origin
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "*"
+    response.headers["Access-Control-Allow-Credentials"] = "false"
+    response.headers["Access-Control-Max-Age"] = "3600"
+    
+    return response
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[FRONTEND_URL] + LOCAL_URLS,
-    allow_credentials=False,  # Changed to False for broader compatibility
-    allow_methods=["*"],
-    allow_headers=["*"],
-    expose_headers=["*"],
-    max_age=3600,
-)
+# Handle all OPTIONS requests
+@app.options("/{full_path:path}")
+async def options_handler(full_path: str):
+    """Handle all OPTIONS preflight requests"""
+    return JSONResponse(
+        content={"status": "ok"},
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+            "Access-Control-Allow-Headers": "*",
+            "Access-Control-Max-Age": "3600",
+        }
+    )
 
 # MongoDB Configuration
 MONGO_URI = os.getenv("MONGO_URI")
 mongo_client = None
 chats_db = None
 
-def initialize_database():
-    """Initialize MongoDB connection"""
+def get_database():
+    """Get MongoDB database connection"""
     global mongo_client, chats_db
     
-    if chats_db is not None:
+    if chats_db:
         return chats_db
     
     if not MONGO_URI:
-        print("⚠️  MONGO_URI not configured. Database features disabled.")
+        print("⚠️  MONGO_URI not set")
         return None
     
     try:
         mongo_client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=3000)
         database = mongo_client["plant_disease_db"]
         chats_db = database["chats"]
-        
-        # Create indexes
         chats_db.create_index([("user_id", 1), ("created_at", -1)])
         chats_db.create_index("id")
-        
-        print("✅ MongoDB connected successfully")
+        print("✅ MongoDB connected")
         return chats_db
-    except ServerSelectionTimeoutError as error:
-        print(f"❌ MongoDB connection failed: {error}")
+    except Exception as e:
+        print(f"❌ MongoDB error: {e}")
         return None
 
-# Pydantic Models
-class ImagePredictionRequest(BaseModel):
+# Models
+class ImageRequest(BaseModel):
     image: str
 
-class DeepSeekQueryRequest(BaseModel):
+class DeepSeekRequest(BaseModel):
     prompt_data: str
 
-class CreateChatRequest(BaseModel):
+class ChatCreate(BaseModel):
     userId: str
     id: str
     title: str
@@ -83,102 +97,54 @@ class CreateChatRequest(BaseModel):
     location: Optional[dict] = None
     timestamp: str
 
-class UpdateChatRequest(BaseModel):
+class ChatUpdate(BaseModel):
     conversation: List[dict]
 
-# Health Check Endpoints
+# Endpoints
 @app.get("/")
-async def root():
-    """Root endpoint"""
-    return {
-        "service": "Plant Disease Detection API",
-        "version": "1.0.0",
-        "status": "running"
-    }
+def root():
+    return {"service": "Plant Disease Detection API", "status": "running"}
 
 @app.get("/isAlive")
-async def health_check():
-    """Health check endpoint"""
-    return {"status": "ok", "timestamp": datetime.utcnow().isoformat()}
+def health():
+    return {"status": "ok"}
 
-@app.options("/predict")
-async def predict_options():
-    """Handle OPTIONS request for /predict"""
-    return JSONResponse(content={"status": "ok"})
-
-@app.options("/deepseek")
-async def deepseek_options():
-    """Handle OPTIONS request for /deepseek"""
-    return JSONResponse(content={"status": "ok"})
-
-# Prediction Endpoint
 @app.post("/predict")
-async def make_prediction(request: ImagePredictionRequest):
-    """Analyze plant leaf image and predict diseases"""
+def predict_disease(req: ImageRequest):
     try:
-        # Decode base64 image
-        image_bytes = base64.b64decode(request.image)
-        image = Image.open(BytesIO(image_bytes)).convert("RGB")
-    except Exception as error:
-        raise HTTPException(
-            status_code=400, 
-            detail=f"Invalid image data: {str(error)}"
-        )
-    
-    # Get model path
-    model_path = os.path.join(os.getcwd(), "model", "18_Epoch.pth")
-    
-    if not os.path.exists(model_path):
-        raise HTTPException(
-            status_code=500, 
-            detail="Model file not found"
-        )
-    
-    # Run prediction
-    try:
-        predictions = predict(model_path, image)
-        return predictions
-    except Exception as error:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Prediction failed: {str(error)}"
-        )
+        img_data = base64.b64decode(req.image)
+        img = Image.open(BytesIO(img_data)).convert("RGB")
+        
+        model_path = os.path.join(os.getcwd(), "model", "18_Epoch.pth")
+        if not os.path.exists(model_path):
+            raise HTTPException(500, "Model not found")
+        
+        return predict(model_path, img)
+    except Exception as e:
+        raise HTTPException(500, str(e))
 
-# DeepSeek AI Endpoint
 @app.post("/deepseek")
-async def query_deepseek(request: DeepSeekQueryRequest):
-    """Query DeepSeek AI for plant disease analysis"""
+def deepseek_query(req: DeepSeekRequest):
     try:
-        context = json.loads(request.prompt_data)
+        context = json.loads(req.prompt_data)
         result = api_call(json.dumps(context))
         
-        # Return parsed JSON if possible
         if isinstance(result, str):
             try:
                 return json.loads(result)
             except:
                 return {"response": result}
         return result
-    except Exception as error:
-        raise HTTPException(
-            status_code=500,
-            detail=f"DeepSeek query failed: {str(error)}"
-        )
+    except Exception as e:
+        raise HTTPException(500, str(e))
 
-# Chat Management Endpoints
 @app.post("/chats")
-async def create_new_chat(chat: CreateChatRequest):
-    """Create a new chat session"""
-    collection = initialize_database()
+def create_chat(chat: ChatCreate):
+    db = get_database()
+    if not db:
+        raise HTTPException(503, "Database unavailable")
     
-    if collection is None:
-        raise HTTPException(
-            status_code=503,
-            detail="Database service unavailable"
-        )
-    
-    # Prepare document
-    chat_document = {
+    doc = {
         "id": chat.id,
         "user_id": chat.userId,
         "title": chat.title,
@@ -192,104 +158,38 @@ async def create_new_chat(chat: CreateChatRequest):
         "created_at": datetime.utcnow(),
     }
     
-    try:
-        collection.insert_one(chat_document)
-        return chat_document
-    except Exception as error:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to create chat: {str(error)}"
-        )
+    db.insert_one(doc)
+    return doc
 
 @app.get("/chats/{user_id}")
-async def get_user_chats(user_id: str):
-    """Retrieve all chats for a specific user"""
-    collection = initialize_database()
-    
-    if collection is None:
+def get_chats(user_id: str):
+    db = get_database()
+    if not db:
         return []
     
-    try:
-        chats = list(collection.find({"user_id": user_id}).sort("created_at", -1))
-        return chats
-    except Exception as error:
-        print(f"Error fetching chats: {error}")
-        return []
+    chats = list(db.find({"user_id": user_id}).sort("created_at", -1))
+    return chats
 
 @app.put("/chats/{chat_id}")
-async def update_existing_chat(chat_id: str, chat: UpdateChatRequest):
-    """Update conversation in existing chat"""
-    collection = initialize_database()
+def update_chat(chat_id: str, chat: ChatUpdate):
+    db = get_database()
+    if not db:
+        raise HTTPException(503, "Database unavailable")
     
-    if collection is None:
-        raise HTTPException(
-            status_code=503,
-            detail="Database service unavailable"
-        )
+    result = db.update_one({"id": chat_id}, {"$set": {"conversation": chat.conversation}})
+    if result.matched_count == 0:
+        raise HTTPException(404, "Chat not found")
     
-    try:
-        result = collection.update_one(
-            {"id": chat_id},
-            {"$set": {"conversation": chat.conversation}}
-        )
-        
-        if result.matched_count == 0:
-            raise HTTPException(
-                status_code=404,
-                detail="Chat not found"
-            )
-        
-        return {"success": True, "updated": True}
-    except HTTPException:
-        raise
-    except Exception as error:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to update chat: {str(error)}"
-        )
+    return {"ok": True}
 
 @app.delete("/chats/{chat_id}")
-async def delete_existing_chat(chat_id: str):
-    """Delete a chat session"""
-    collection = initialize_database()
+def delete_chat(chat_id: str):
+    db = get_database()
+    if not db:
+        raise HTTPException(503, "Database unavailable")
     
-    if collection is None:
-        raise HTTPException(
-            status_code=503,
-            detail="Database service unavailable"
-        )
+    result = db.delete_one({"id": chat_id})
+    if result.deleted_count == 0:
+        raise HTTPException(404, "Chat not found")
     
-    try:
-        result = collection.delete_one({"id": chat_id})
-        
-        if result.deleted_count == 0:
-            raise HTTPException(
-                status_code=404,
-                detail="Chat not found"
-            )
-        
-        return {"success": True, "deleted": True}
-    except HTTPException:
-        raise
-    except Exception as error:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to delete chat: {str(error)}"
-        )
-
-# Exception Handlers
-@app.exception_handler(Exception)
-async def global_exception_handler(request: Request, exc: Exception):
-    """Global exception handler"""
-    print(f"Global exception: {exc}")
-    return JSONResponse(
-        status_code=500,
-        content={
-            "detail": "Internal server error",
-            "error": str(exc)
-        }
-    )
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    return {"ok": True}
