@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
@@ -19,22 +19,59 @@ from deepseek import api_call
 # Initialize FastAPI app
 app = FastAPI(title="Plant Disease Detection API")
 
-# Add CORS middleware - Use FastAPI's built-in middleware
+# Option 1: Use built-in CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "https://plant-dd.vercel.app",
         "http://localhost:3000",
-        "http://localhost:5173",  # Vite default
+        "http://localhost:5173",
         "http://127.0.0.1:3000",
         "http://127.0.0.1:5173",
+        "*"  # For testing, remove in production
     ],
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
     expose_headers=["*"],
-    max_age=600,  # Cache preflight for 10 minutes
+    max_age=600,
 )
+
+# Option 2: Custom middleware that runs BEFORE Railway's proxy
+@app.middleware("http")
+async def add_cors_middleware(request: Request, call_next):
+    """Add CORS headers to every response - placed BEFORE other middleware"""
+    
+    # Handle preflight requests
+    if request.method == "OPTIONS":
+        response = JSONResponse(
+            content={"status": "ok"},
+            headers={
+                "Access-Control-Allow-Origin": "https://plant-dd.vercel.app",
+                "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+                "Access-Control-Allow-Headers": "Content-Type, Authorization, Accept, Origin, X-Requested-With",
+                "Access-Control-Max-Age": "600",
+                "Access-Control-Allow-Credentials": "true",
+            }
+        )
+        return response
+    
+    # Process the request
+    response = await call_next(request)
+    
+    # Add CORS headers to the response
+    origin = request.headers.get("origin")
+    if origin and origin in ["https://plant-dd.vercel.app", "http://localhost:3000", "http://localhost:5173"]:
+        response.headers["Access-Control-Allow-Origin"] = origin
+    else:
+        response.headers["Access-Control-Allow-Origin"] = "https://plant-dd.vercel.app"
+    
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, Accept, Origin, X-Requested-With"
+    response.headers["Access-Control-Allow-Credentials"] = "true"
+    response.headers["Access-Control-Expose-Headers"] = "*"
+    
+    return response
 
 # MongoDB Configuration
 MONGO_URI = os.getenv("MONGO_URI")
@@ -96,7 +133,8 @@ def health():
     return {"status": "ok"}
 
 @app.post("/predict")
-def predict_disease(req: ImageRequest):
+async def predict_disease(req: ImageRequest):
+    """Predict plant disease from image"""
     try:
         img_data = base64.b64decode(req.image)
         img = Image.open(BytesIO(img_data)).convert("RGB")
@@ -105,12 +143,15 @@ def predict_disease(req: ImageRequest):
         if not os.path.exists(model_path):
             raise HTTPException(status_code=500, detail="Model not found")
         
-        return predict(model_path, img)
+        result = predict(model_path, img)
+        return result
     except Exception as e:
+        print(f"Error in predict: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/deepseek")
-def deepseek_query(req: DeepSeekRequest):
+async def deepseek_query(req: DeepSeekRequest):
+    """Query DeepSeek API"""
     try:
         context = json.loads(req.prompt_data)
         result = api_call(json.dumps(context))
@@ -122,10 +163,12 @@ def deepseek_query(req: DeepSeekRequest):
                 return {"response": result}
         return result
     except Exception as e:
+        print(f"Error in deepseek: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
+# Chat endpoints
 @app.post("/chats")
-def create_chat(chat: ChatCreate):
+async def create_chat(chat: ChatCreate):
     db = get_database()
     if not db:
         raise HTTPException(status_code=503, detail="Database unavailable")
@@ -148,16 +191,19 @@ def create_chat(chat: ChatCreate):
     return doc
 
 @app.get("/chats/{user_id}")
-def get_chats(user_id: str):
+async def get_chats(user_id: str):
     db = get_database()
     if not db:
         return []
     
     chats = list(db.find({"user_id": user_id}).sort("created_at", -1))
+    # Convert ObjectId to string for JSON serialization
+    for chat in chats:
+        chat["_id"] = str(chat["_id"])
     return chats
 
 @app.put("/chats/{chat_id}")
-def update_chat(chat_id: str, chat: ChatUpdate):
+async def update_chat(chat_id: str, chat: ChatUpdate):
     db = get_database()
     if not db:
         raise HTTPException(status_code=503, detail="Database unavailable")
@@ -169,7 +215,7 @@ def update_chat(chat_id: str, chat: ChatUpdate):
     return {"ok": True}
 
 @app.delete("/chats/{chat_id}")
-def delete_chat(chat_id: str):
+async def delete_chat(chat_id: str):
     db = get_database()
     if not db:
         raise HTTPException(status_code=503, detail="Database unavailable")
@@ -180,16 +226,17 @@ def delete_chat(chat_id: str):
     
     return {"ok": True}
 
-# Optional: Add this if you want to allow all origins (less secure)
-# For development/testing only
-@app.middleware("http")
-async def catch_all_cors(request: Request, call_next):
-    response = await call_next(request)
-    
-    # Only add CORS headers if they're not already set
-    if "Access-Control-Allow-Origin" not in response.headers:
-        response.headers["Access-Control-Allow-Origin"] = "*"
-        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
-        response.headers["Access-Control-Allow-Headers"] = "*"
-    
-    return response
+# Explicit OPTIONS handler for all routes
+@app.options("/{full_path:path}")
+async def options_handler(full_path: str, request: Request):
+    """Handle all OPTIONS preflight requests"""
+    return JSONResponse(
+        content={"status": "ok"},
+        headers={
+            "Access-Control-Allow-Origin": "https://plant-dd.vercel.app",
+            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type, Authorization, Accept, Origin, X-Requested-With",
+            "Access-Control-Max-Age": "600",
+            "Access-Control-Allow-Credentials": "true",
+        }
+    )
