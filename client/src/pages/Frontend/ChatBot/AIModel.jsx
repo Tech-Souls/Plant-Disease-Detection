@@ -41,8 +41,18 @@ const AIModel = () => {
         sendCustomPrompt,
         loadChatFromHistory,
         deleteChatFromHistory,
-        startNewChat
+        startNewChat,
+        retryGetLocation
     } = useChatLogic();
+
+    // DEBUGGING: Log environment variables
+    useEffect(() => {
+        console.log('=== ENVIRONMENT VARIABLES CHECK ===');
+        console.log('VITE_PYTHON_HOST:', import.meta.env.VITE_PYTHON_HOST);
+        console.log('VITE_HOST:', import.meta.env.VITE_HOST);
+        console.log('VITE_APIFY_API_TOKEN:', import.meta.env.VITE_APIFY_API_TOKEN ? 'SET' : 'NOT SET');
+        console.log('===================================');
+    }, []);
 
     // Apply Nastaleeq font to elements containing Urdu text
     useEffect(() => {
@@ -137,7 +147,7 @@ const AIModel = () => {
                 userLocation={userLocation}
                 locationLoading={locationLoading}
                 locationError={locationError}
-                getUserLocation={getUserLocation}
+                retryGetLocation={retryGetLocation}
                 t={t}
                 languageMode={languageMode}
             />
