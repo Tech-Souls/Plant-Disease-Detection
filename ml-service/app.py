@@ -25,6 +25,7 @@ app = FastAPI(title="Plant Disease Detection API")
 ALLOWED_ORIGINS = [
     "https://plant-dd.vercel.app",
     "https://plants-frontend-c2fq.vercel.app",
+    "https://plants-frontend-c2fq-lnalvwzp9-aowns-projects-65e18f65.vercel.app",
     "http://localhost:5173",
     "http://localhost:3000",
     "http://127.0.0.1:5173",
