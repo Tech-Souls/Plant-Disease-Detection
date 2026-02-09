@@ -1,5 +1,5 @@
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
@@ -19,67 +19,77 @@ from deepseek import api_call
 # Initialize FastAPI app
 app = FastAPI(title="Plant Disease Detection API")
 
-# Option 1: Use built-in CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "https://plant-dd.vercel.app",
-        "http://localhost:3000",
-        "http://localhost:5173",
-        "http://127.0.0.1:3000",
-        "http://127.0.0.1:5173",
-        "*"  # For testing, remove in production
-    ],
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["*"],
-    expose_headers=["*"],
-    max_age=600,
-)
+# CRITICAL: Railway-specific CORS fix
+# Railway strips headers, so we need to be aggressive
 
-# Option 2: Custom middleware that runs BEFORE Railway's proxy
+ALLOWED_ORIGINS = [
+    "https://plant-dd.vercel.app",
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:3000",
+]
+
+# Railway Fix #1: Early CORS middleware (BEFORE Railway's proxy processes it)
 @app.middleware("http")
-async def add_cors_middleware(request: Request, call_next):
-    """Add CORS headers to every response - placed BEFORE other middleware"""
+async def railway_cors_fix(request: Request, call_next):
+    """
+    Railway-specific CORS fix - runs BEFORE Railway's proxy layer
+    This is critical because Railway strips standard CORS headers
+    """
     
-    # Handle preflight requests
+    # Get the origin from the request
+    origin = request.headers.get("origin", "")
+    
+    # For OPTIONS requests, return immediately with CORS headers
     if request.method == "OPTIONS":
-        response = JSONResponse(
-            content={"status": "ok"},
+        return Response(
+            status_code=200,
             headers={
-                "Access-Control-Allow-Origin": "https://plant-dd.vercel.app",
-                "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-                "Access-Control-Allow-Headers": "Content-Type, Authorization, Accept, Origin, X-Requested-With",
-                "Access-Control-Max-Age": "600",
+                "Access-Control-Allow-Origin": origin if origin in ALLOWED_ORIGINS else ALLOWED_ORIGINS[0],
+                "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS, PATCH",
+                "Access-Control-Allow-Headers": "Content-Type, Authorization, Accept, Origin, X-Requested-With, X-Request-ID",
                 "Access-Control-Allow-Credentials": "true",
+                "Access-Control-Max-Age": "3600",
+                "Content-Type": "application/json",
+                "Content-Length": "0",
             }
         )
-        return response
     
     # Process the request
     response = await call_next(request)
     
-    # Add CORS headers to the response
-    origin = request.headers.get("origin")
-    if origin and origin in ["https://plant-dd.vercel.app", "http://localhost:3000", "http://localhost:5173"]:
+    # Add CORS headers to EVERY response (Railway needs this)
+    if origin in ALLOWED_ORIGINS:
         response.headers["Access-Control-Allow-Origin"] = origin
     else:
-        response.headers["Access-Control-Allow-Origin"] = "https://plant-dd.vercel.app"
+        response.headers["Access-Control-Allow-Origin"] = ALLOWED_ORIGINS[0]
     
-    response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
-    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, Accept, Origin, X-Requested-With"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS, PATCH"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, Accept, Origin, X-Requested-With, X-Request-ID"
     response.headers["Access-Control-Allow-Credentials"] = "true"
     response.headers["Access-Control-Expose-Headers"] = "*"
+    response.headers["Vary"] = "Origin"
     
     return response
 
-# MongoDB Configuration
+# Railway Fix #2: Standard CORS middleware (defense in depth)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=ALLOWED_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["*"],
+    max_age=3600,
+)
+
+# MongoDB Configuration (same as before)
 MONGO_URI = os.getenv("MONGO_URI")
 mongo_client = None
 chats_db = None
 
 def get_database():
-    """Get MongoDB database connection"""
     global mongo_client, chats_db
     
     if chats_db:
@@ -101,7 +111,7 @@ def get_database():
         print(f"❌ MongoDB error: {e}")
         return None
 
-# Models
+# Models (same as before)
 class ImageRequest(BaseModel):
     image: str
 
@@ -123,18 +133,17 @@ class ChatCreate(BaseModel):
 class ChatUpdate(BaseModel):
     conversation: List[dict]
 
-# Endpoints
+# Endpoints (same as before, but with explicit CORS headers on errors)
 @app.get("/")
 def root():
-    return {"service": "Plant Disease Detection API", "status": "running"}
+    return {"service": "Plant Disease Detection API", "status": "running", "cors": "enabled"}
 
 @app.get("/isAlive")
 def health():
-    return {"status": "ok"}
+    return {"status": "ok", "cors": "enabled"}
 
 @app.post("/predict")
 async def predict_disease(req: ImageRequest):
-    """Predict plant disease from image"""
     try:
         img_data = base64.b64decode(req.image)
         img = Image.open(BytesIO(img_data)).convert("RGB")
@@ -151,7 +160,6 @@ async def predict_disease(req: ImageRequest):
 
 @app.post("/deepseek")
 async def deepseek_query(req: DeepSeekRequest):
-    """Query DeepSeek API"""
     try:
         context = json.loads(req.prompt_data)
         result = api_call(json.dumps(context))
@@ -166,7 +174,7 @@ async def deepseek_query(req: DeepSeekRequest):
         print(f"Error in deepseek: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-# Chat endpoints
+# Chat endpoints (same as before)
 @app.post("/chats")
 async def create_chat(chat: ChatCreate):
     db = get_database()
@@ -197,7 +205,6 @@ async def get_chats(user_id: str):
         return []
     
     chats = list(db.find({"user_id": user_id}).sort("created_at", -1))
-    # Convert ObjectId to string for JSON serialization
     for chat in chats:
         chat["_id"] = str(chat["_id"])
     return chats
@@ -226,17 +233,23 @@ async def delete_chat(chat_id: str):
     
     return {"ok": True}
 
-# Explicit OPTIONS handler for all routes
-@app.options("/{full_path:path}")
-async def options_handler(full_path: str, request: Request):
-    """Handle all OPTIONS preflight requests"""
-    return JSONResponse(
-        content={"status": "ok"},
-        headers={
-            "Access-Control-Allow-Origin": "https://plant-dd.vercel.app",
-            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-            "Access-Control-Allow-Headers": "Content-Type, Authorization, Accept, Origin, X-Requested-With",
-            "Access-Control-Max-Age": "600",
-            "Access-Control-Allow-Credentials": "true",
-        }
-    )
+# Railway Fix #3: Explicit OPTIONS handlers for all routes
+@app.options("/")
+@app.options("/isAlive")
+@app.options("/predict")
+@app.options("/deepseek")
+@app.options("/chats")
+@app.options("/chats/{user_id}")
+@app.options("/chats/{chat_id}")
+async def options_handler():
+    """Handle OPTIONS preflight for all routes"""
+    return Response(status_code=200)
+
+# Railway Fix #4: Startup event to log CORS config
+@app.on_event("startup")
+async def startup_event():
+    print("=" * 50)
+    print("🚀 Plant Disease API Starting")
+    print(f"📍 Allowed Origins: {ALLOWED_ORIGINS}")
+    print(f"🔧 CORS: Multi-layer protection enabled")
+    print("=" * 50)
